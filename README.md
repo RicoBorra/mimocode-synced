@@ -266,6 +266,52 @@ bun -e '
 - `bun run test`
 - `bun run lint`
 
+## Codex Environment
+
+This repo includes a shared Codex local environment at:
+
+- `.codex/environments/environment.toml`
+- `scripts/setup-env.sh`
+- `scripts/e2e/github_two_instance.py`
+
+### Setup behavior
+
+The Codex environment just invokes `scripts/setup-env.sh`. Setup does:
+
+- `bun install` (idempotent)
+- creates runtime folders under `.memory/`
+- clones upstream opencode into `.memory/opencode-upstream/opencode` **only if missing**
+
+The upstream clone is local-only and is not auto-updated by setup.
+
+### Actions
+
+The environment exposes these actions in Codex:
+
+- `Check` -> `bun run check`
+- `Test` -> `bun test`
+- `Build` -> `bun run build`
+- `E2E GitHub (2 instances)` -> `python3 scripts/e2e/github_two_instance.py`
+
+### End-to-end test harness
+
+Run manually:
+
+```bash
+python3 scripts/e2e/github_two_instance.py
+```
+
+Helpful options:
+
+```bash
+python3 scripts/e2e/github_two_instance.py --help
+python3 scripts/e2e/github_two_instance.py --preflight-only
+python3 scripts/e2e/github_two_instance.py --keep-failed-repo
+```
+
+The harness runs two isolated opencode instances, uses a unique ephemeral private GitHub repo,
+and writes artifacts to `.memory/e2e/runs/<run-id>/`.
+
 ### Local testing (production-like)
 
 To test the same artifact that would be published, install from a packed tarball
