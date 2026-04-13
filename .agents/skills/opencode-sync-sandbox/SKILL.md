@@ -19,9 +19,19 @@ Follow this workflow whenever a task changes sync behavior, config handling, com
    - `bun run build`
 6. Run full isolated E2E before declaring success:
    - `./.agents/skills/opencode-sync-sandbox/scripts/run-e2e.sh`
-7. Report exact evidence: what changed, what tests ran, and E2E artifact path.
+   - Run E2E variants that directly exercise the features changed in this task
+     (for example: sessions, secrets, or other changed sync flags/paths).
+7. Report exact evidence: what changed, what tests ran, and an E2E artifact review.
 
 Do not skip E2E for changes that affect sync workflows, path resolution, repo operations, or command execution.
+
+## E2E Reporting Requirements
+
+- Do not report the E2E artifact path unless the user explicitly asks for it.
+- Read `results/summary.json`, command result payloads under `results/`, and relevant `logs/*.log` tails.
+- Summarize the executed flow, pass/fail status, key warnings/errors, and any suspicious signals.
+- If warnings exist, explain whether they are expected, tolerated, or need follow-up.
+- For feature-flagged runs, report the exact artifact-level behavior for each changed feature (including restart requirements when relevant).
 
 ## Sandbox Rules
 
@@ -44,6 +54,10 @@ Use this clone to confirm command/server/tool behavior and avoid assumptions.
   - `./.agents/skills/opencode-sync-sandbox/scripts/preflight.sh`
 - Full two-instance GitHub E2E:
   - `./.agents/skills/opencode-sync-sandbox/scripts/run-e2e.sh`
+  - Enable secrets coverage:
+    `./.agents/skills/opencode-sync-sandbox/scripts/run-e2e.sh --enable-secrets`
+  - Enable session database coverage (implies secrets):
+    `./.agents/skills/opencode-sync-sandbox/scripts/run-e2e.sh --enable-sessions`
 
 For additional usage flags, run:
 

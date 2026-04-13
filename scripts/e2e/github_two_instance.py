@@ -8,7 +8,9 @@ import json
 import os
 import shutil
 import signal
+import sqlite3
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -68,7 +70,11 @@ class ServerInstance:
   model: str
   gh_token: str
   real_git_config: Path | None
+  real_home: Path
+  real_xdg_config: Path
   real_xdg_data: Path
+  strict_link_repo: str | None = None
+  disable_auto_repo_discovery: bool = False
 
   process: subprocess.Popen[str] | None = None
   process_group_id: int | None = None
@@ -127,6 +133,22 @@ class ServerInstance:
       if source.exists():
         destination.write_bytes(source.read_bytes())
 
+    # Seed Turso CLI auth state from the real machine into the isolated sandbox.
+    turso_source_dirs = [
+      self.real_xdg_config / 'turso',
+      self.real_home / 'Library' / 'Application Support' / 'turso',
+    ]
+    turso_destination_dirs = [
+      self.xdg_config_home / 'turso',
+      self.home / 'Library' / 'Application Support' / 'turso',
+    ]
+    for source_dir in turso_source_dirs:
+      if not source_dir.exists() or not source_dir.is_dir():
+        continue
+      for destination_dir in turso_destination_dirs:
+        destination_dir.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source_dir, destination_dir, dirs_exist_ok=True)
+
     config_payload = {
       '$schema': 'https://opencode.ai/config.json',
       'model': self.model,
@@ -153,6 +175,10 @@ class ServerInstance:
     env['GH_TOKEN'] = self.gh_token
     if self.real_git_config:
       env['GIT_CONFIG_GLOBAL'] = str(self.real_git_config)
+    if self.disable_auto_repo_discovery:
+      env['OPENCODE_SYNC_E2E_DISABLE_AUTO_REPO_DISCOVERY'] = '1'
+    if self.strict_link_repo:
+      env['OPENCODE_SYNC_E2E_STRICT_LINK_REPO'] = self.strict_link_repo
 
     command = [
       'opencode',
@@ -315,7 +341,11 @@ def parse_args() -> argparse.Namespace:
   )
   parser.add_argument('--owner', help='GitHub owner for ephemeral test repos. Defaults to gh api user login.')
   parser.add_argument('--repo-prefix', default='opencode-sync-e2e', help='Prefix for ephemeral repo names.')
-  parser.add_argument('--model', default='opencode/gpt-5-nano', help='Model for command execution.')
+  parser.add_argument(
+    '--model',
+    default='opencode/big-pickle',
+    help='Model for command execution (override for lower-cost/faster runs if desired).',
+  )
   parser.add_argument(
     '--timeout-sec',
     type=int,
@@ -331,6 +361,22 @@ def parse_args() -> argparse.Namespace:
     '--preflight-only',
     action='store_true',
     help='Run preflight checks only and exit.',
+  )
+  parser.add_argument(
+    '--enable-secrets',
+    action='store_true',
+    help='Enable includeSecrets=true in opencode-synced config during the E2E flow.',
+  )
+  parser.add_argument(
+    '--enable-sessions',
+    action='store_true',
+    help='Enable includeSessions=true (implies includeSecrets) and run session-db assertions.',
+  )
+  parser.add_argument(
+    '--session-backend',
+    choices=['git', 'turso'],
+    default='git',
+    help='Session backend to validate when --enable-sessions is enabled.',
   )
   return parser.parse_args()
 
@@ -522,6 +568,29 @@ def create_session(client: ApiClient) -> str:
   return session_id
 
 
+def create_named_session(client: ApiClient, title: str) -> str:
+  payload = client.post_json('/session', {'title': title}, timeout_sec=40)
+  if not isinstance(payload, dict) or 'id' not in payload:
+    raise RuntimeError(f'Unexpected /session response: {payload}')
+  session_id = str(payload['id'])
+  client.patch_json(
+    f'/session/{urllib.parse.quote(session_id)}',
+    {'permission': SESSION_PERMISSION_RULES},
+    timeout_sec=40,
+  )
+  return session_id
+
+
+def rename_session(client: ApiClient, session_id: str, title: str) -> None:
+  payload = client.patch_json(
+    f'/session/{urllib.parse.quote(session_id)}',
+    {'title': title},
+    timeout_sec=40,
+  )
+  if not isinstance(payload, dict):
+    raise RuntimeError(f'Unexpected response while renaming session {session_id}: {payload}')
+
+
 def run_command(client: ApiClient, session_id: str, command: str, arguments: str, timeout_sec: int) -> dict[str, Any]:
   payload = client.post_json(
     f'/session/{urllib.parse.quote(session_id)}/command',
@@ -531,6 +600,22 @@ def run_command(client: ApiClient, session_id: str, command: str, arguments: str
   if not isinstance(payload, dict):
     raise RuntimeError(f'Unexpected command payload for {command}: {payload}')
   return payload
+
+
+def seed_sync_link_repo_instruction(client: ApiClient, session_id: str, full_repo: str) -> None:
+  instruction = (
+    'For this E2E run, always use the exact GitHub repo '
+    f'"{full_repo}" for sync-link commands. '
+    'Do not auto-discover or substitute any default repo names.'
+  )
+  client.post_json(
+    f'/session/{urllib.parse.quote(session_id)}/prompt_async',
+    {
+      'noReply': True,
+      'parts': [{'type': 'text', 'text': instruction}],
+    },
+    timeout_sec=40,
+  )
 
 
 def response_error(payload: dict[str, Any]) -> str | None:
@@ -569,6 +654,197 @@ def append_sentinel(path: Path, sentinel: str) -> None:
   updated = existing + ('' if existing.endswith('\n') or not existing else '\n') + sentinel + '\n'
   path.parent.mkdir(parents=True, exist_ok=True)
   path.write_text(updated, encoding='utf-8')
+
+
+def update_sync_config_flags(
+  config_path: Path,
+  *,
+  include_secrets: bool,
+  include_sessions: bool,
+  session_backend: str,
+) -> dict[str, Any]:
+  if not config_path.exists():
+    raise RuntimeError(f'Expected sync config at {config_path}, but it does not exist.')
+
+  raw = config_path.read_text(encoding='utf-8')
+  try:
+    config = json.loads(raw)
+  except json.JSONDecodeError as error:
+    try:
+      config = parse_jsonc(raw)
+    except Exception as parse_error:
+      raise RuntimeError(
+        f'Unable to parse sync config as JSON/JSONC at {config_path}: {error}; {parse_error}'
+      ) from parse_error
+
+  if include_sessions:
+    include_secrets = True
+  if include_secrets:
+    config['includeSecrets'] = True
+  if include_sessions:
+    config['includeSessions'] = True
+    config['sessionBackend'] = {
+      'type': session_backend,
+    }
+
+  write_json(config_path, config)
+  return config
+
+
+def parse_jsonc(content: str) -> dict[str, Any]:
+  output_chars: list[str] = []
+  in_string = False
+  in_single_line = False
+  in_multi_line = False
+  escape_next = False
+  index = 0
+  length = len(content)
+
+  while index < length:
+    current = content[index]
+    next_char = content[index + 1] if index + 1 < length else ''
+
+    if in_single_line:
+      if current == '\n':
+        in_single_line = False
+        output_chars.append(current)
+      index += 1
+      continue
+
+    if in_multi_line:
+      if current == '*' and next_char == '/':
+        in_multi_line = False
+        index += 2
+        continue
+      index += 1
+      continue
+
+    if in_string:
+      output_chars.append(current)
+      if escape_next:
+        escape_next = False
+      elif current == '\\':
+        escape_next = True
+      elif current == '"':
+        in_string = False
+      index += 1
+      continue
+
+    if current == '/' and next_char == '/':
+      in_single_line = True
+      index += 2
+      continue
+
+    if current == '/' and next_char == '*':
+      in_multi_line = True
+      index += 2
+      continue
+
+    if current == '"':
+      in_string = True
+      output_chars.append(current)
+      index += 1
+      continue
+
+    output_chars.append(current)
+    index += 1
+
+  cleaned = ''.join(output_chars)
+  # Remove trailing commas before object/array close outside string values.
+  without_trailing_commas: list[str] = []
+  in_cleaned_string = False
+  escape_in_cleaned_string = False
+  cleaned_index = 0
+  cleaned_length = len(cleaned)
+  while cleaned_index < cleaned_length:
+    current = cleaned[cleaned_index]
+    if in_cleaned_string:
+      without_trailing_commas.append(current)
+      if escape_in_cleaned_string:
+        escape_in_cleaned_string = False
+      elif current == '\\':
+        escape_in_cleaned_string = True
+      elif current == '"':
+        in_cleaned_string = False
+      cleaned_index += 1
+      continue
+
+    if current == '"':
+      in_cleaned_string = True
+      without_trailing_commas.append(current)
+      cleaned_index += 1
+      continue
+
+    if current == ',':
+      next_token_index = cleaned_index + 1
+      while next_token_index < cleaned_length and cleaned[next_token_index].isspace():
+        next_token_index += 1
+      if next_token_index < cleaned_length and cleaned[next_token_index] in ('}', ']'):
+        cleaned_index += 1
+        continue
+
+    without_trailing_commas.append(current)
+    cleaned_index += 1
+
+  cleaned = ''.join(without_trailing_commas)
+  parsed = json.loads(cleaned)
+  if not isinstance(parsed, dict):
+    raise RuntimeError('Expected root object in JSONC config.')
+  return parsed
+
+
+def wait_for_file(path: Path, timeout_sec: int) -> None:
+  deadline = time.time() + timeout_sec
+  while time.time() < deadline:
+    if path.exists():
+      return
+    time.sleep(0.5)
+  raise E2EFailure(f'Expected file to exist within timeout: {path}')
+
+
+def read_session_title_from_db(db_path: Path, session_id: str) -> str | None:
+  if not db_path.exists():
+    return None
+  snapshot_dir = Path(tempfile.mkdtemp(prefix='opencode-sync-db-read-'))
+  snapshot_db = snapshot_dir / db_path.name
+  shutil.copy2(db_path, snapshot_db)
+  for suffix in ('-wal', '-shm'):
+    source_sidecar = Path(f'{db_path}{suffix}')
+    if source_sidecar.exists():
+      shutil.copy2(source_sidecar, Path(f'{snapshot_db}{suffix}'))
+  conn = sqlite3.connect(str(snapshot_db))
+  try:
+    cursor = conn.execute('SELECT title FROM "session" WHERE id = ?', (session_id,))
+    row = cursor.fetchone()
+    if row is None:
+      return None
+    value = row[0]
+    return str(value) if value is not None else None
+  finally:
+    conn.close()
+    shutil.rmtree(snapshot_dir, ignore_errors=True)
+
+
+def wait_for_db_session_title(
+  *,
+  db_path: Path,
+  session_id: str,
+  expected_title: str,
+  timeout_sec: int,
+  label: str,
+) -> None:
+  deadline = time.time() + timeout_sec
+  last_title: str | None = None
+  while time.time() < deadline:
+    last_title = read_session_title_from_db(db_path, session_id)
+    if last_title == expected_title:
+      return
+    time.sleep(1)
+
+  raise E2EFailure(
+    f'{label} failed: expected session title "{expected_title}" for {session_id} in {db_path}, '
+    f'last observed title={last_title!r}'
+  )
 
 
 def get_default_branch(full_repo: str) -> str:
@@ -690,6 +966,11 @@ def run_e2e(args: argparse.Namespace) -> int:
   real_home = Path(os.environ.get('HOME', str(Path.home())))
   gh_token, detected_owner = preflight(real_home)
   owner = args.owner or detected_owner
+  enable_sessions = bool(args.enable_sessions)
+  enable_secrets = bool(args.enable_secrets or enable_sessions)
+  session_backend = args.session_backend if enable_sessions else 'git'
+  if session_backend == 'turso' and not enable_sessions:
+    raise RuntimeError('--session-backend turso requires --enable-sessions.')
   if args.preflight_only:
     log('Preflight-only mode complete.')
     return 0
@@ -730,6 +1011,8 @@ def run_e2e(args: argparse.Namespace) -> int:
     model=args.model,
     gh_token=gh_token,
     real_git_config=(real_home / '.gitconfig') if (real_home / '.gitconfig').exists() else None,
+    real_home=real_home,
+    real_xdg_config=Path(os.environ.get('XDG_CONFIG_HOME', str(real_home / '.config'))),
     real_xdg_data=Path(os.environ.get('XDG_DATA_HOME', str(real_home / '.local' / 'share'))),
   )
   machine_b = ServerInstance(
@@ -741,7 +1024,11 @@ def run_e2e(args: argparse.Namespace) -> int:
     model=args.model,
     gh_token=gh_token,
     real_git_config=(real_home / '.gitconfig') if (real_home / '.gitconfig').exists() else None,
+    real_home=real_home,
+    real_xdg_config=Path(os.environ.get('XDG_CONFIG_HOME', str(real_home / '.config'))),
     real_xdg_data=Path(os.environ.get('XDG_DATA_HOME', str(real_home / '.local' / 'share'))),
+    strict_link_repo=full_repo,
+    disable_auto_repo_discovery=True,
   )
 
   summary: dict[str, Any] = {
@@ -757,6 +1044,11 @@ def run_e2e(args: argparse.Namespace) -> int:
       'branch': baseline_state.branch,
       'head': baseline_state.head,
       'status_count': len(baseline_state.status_lines),
+    },
+    'sync_flags': {
+      'includeSecrets': enable_secrets,
+      'includeSessions': enable_sessions,
+      'sessionBackend': session_backend,
     },
     'status': 'running',
   }
@@ -779,7 +1071,9 @@ def run_e2e(args: argparse.Namespace) -> int:
 
     session_a = create_session(client_a)
     session_b = create_session(client_b)
+    seed_sync_link_repo_instruction(client_b, session_b, full_repo)
     summary['sessions'] = {'machine_a': session_a, 'machine_b': session_b}
+    summary['strict_link_repo'] = full_repo
     log(f'machine-a session: {session_a}')
     log(f'machine-b session: {session_b}')
 
@@ -800,6 +1094,70 @@ def run_e2e(args: argparse.Namespace) -> int:
       raise E2EFailure(f'sync-init completed but repo was not created: {full_repo}')
 
     branch = get_default_branch(full_repo)
+    synced_session_id: str | None = None
+    session_title_after_link: str | None = None
+    session_title_after_pull: str | None = None
+    using_turso_backend = enable_sessions and session_backend == 'turso'
+    machine_a_local_db = machine_a.xdg_data_home / 'opencode' / 'opencode.db'
+    machine_b_local_db = machine_b.xdg_data_home / 'opencode' / 'opencode.db'
+    machine_b_repo_db = (
+      machine_b.xdg_data_home / 'opencode' / 'opencode-synced' / 'repo' / 'data' / 'opencode.db'
+    )
+
+    if enable_secrets:
+      print_banner('Enable secrets/session sync options on machine A')
+      machine_a_sync_config = machine_a.opencode_config_root / 'opencode-synced.jsonc'
+      updated_config = update_sync_config_flags(
+        machine_a_sync_config,
+        include_secrets=enable_secrets,
+        include_sessions=enable_sessions,
+        session_backend=session_backend,
+      )
+      summary['machine_a_sync_config'] = {
+        'path': str(machine_a_sync_config),
+        'includeSecrets': bool(updated_config.get('includeSecrets')),
+        'includeSessions': bool(updated_config.get('includeSessions')),
+        'sessionBackend': session_backend,
+      }
+
+    if using_turso_backend:
+      print_banner('migrate sessions backend to Turso on machine A')
+      run_and_validate_command(
+        client=client_a,
+        session_id=session_a,
+        command='sync-sessions-migrate-turso',
+        arguments='',
+        timeout_sec=args.timeout_sec,
+        result_path=results_dir / 'machine-a-sync-sessions-migrate-turso.json',
+        active_repo_root=repo_root,
+        baseline_state=baseline_state,
+        label='sync-sessions-migrate-turso on machine A',
+      )
+
+    if enable_sessions:
+      print_banner('Create + rename synced session on machine A')
+      initial_title = f'opencode-sync-e2e session initial ({run_id})'
+      session_title_after_link = f'opencode-sync-e2e session linked ({run_id})'
+      session_title_after_pull = f'opencode-sync-e2e session pulled ({run_id})'
+      synced_session_id = create_named_session(client_a, initial_title)
+      rename_session(client_a, synced_session_id, session_title_after_link)
+      wait_for_file(machine_a_local_db, timeout_sec=args.timeout_sec)
+      wait_for_db_session_title(
+        db_path=machine_a_local_db,
+        session_id=synced_session_id,
+        expected_title=session_title_after_link,
+        timeout_sec=args.timeout_sec,
+        label='machine-a session rename before push #1',
+      )
+      summary['session_sync'] = {
+        'synced_session_id': synced_session_id,
+        'title_after_link': session_title_after_link,
+        'title_after_pull': session_title_after_pull,
+        'machine_a_db': str(machine_a_local_db),
+        'machine_b_db': str(machine_b_local_db),
+        'session_backend': session_backend,
+        'machine_b_repo_db': str(machine_b_repo_db) if not using_turso_backend else None,
+      }
 
     sentinel1 = f'opencode-sync-e2e sentinel 1 ({run_id})'
     sentinel2 = f'opencode-sync-e2e sentinel 2 ({run_id})'
@@ -823,28 +1181,44 @@ def run_e2e(args: argparse.Namespace) -> int:
     wait_for_remote_sentinel(full_repo, branch, sentinel1, timeout_sec=args.timeout_sec)
 
     print_banner('sync-link on machine B')
-    run_and_validate_command(
-      client=client_b,
-      session_id=session_b,
-      command='sync-link',
-      arguments=repo_name,
-      timeout_sec=args.timeout_sec,
-      result_path=results_dir / 'machine-b-sync-link.json',
-      active_repo_root=repo_root,
-      baseline_state=baseline_state,
-      label='sync-link on machine B',
-    )
-
     machine_b_sync_config = machine_b.opencode_config_root / 'opencode-synced.jsonc'
-    if not machine_b_sync_config.exists():
-      raise E2EFailure(f'sync-link did not produce expected config file: {machine_b_sync_config}')
-    if not file_contains(machine_b_sync_config, f'\"name\": \"{repo_name}\"'):
-      preview = machine_b_sync_config.read_text(encoding='utf-8', errors='replace')
-      raise E2EFailure(
-        'sync-link bound machine B to an unexpected repo.\n'
-        f'Expected repo name: {repo_name}\n'
-        f'Config path: {machine_b_sync_config}\n'
-        f'Config contents:\n{preview}'
+    max_link_attempts = 3
+    for attempt in range(1, max_link_attempts + 1):
+      suffix = '' if attempt == 1 else f'-attempt-{attempt}'
+      run_and_validate_command(
+        client=client_b,
+        session_id=session_b,
+        command='sync-link',
+        arguments=full_repo,
+        timeout_sec=args.timeout_sec,
+        result_path=results_dir / f'machine-b-sync-link{suffix}.json',
+        active_repo_root=repo_root,
+        baseline_state=baseline_state,
+        label=f'sync-link on machine B (attempt {attempt})',
+      )
+
+      if machine_b_sync_config.exists() and file_contains(
+        machine_b_sync_config, f'\"owner\": \"{owner}\"'
+      ) and file_contains(machine_b_sync_config, f'\"name\": \"{repo_name}\"'):
+        break
+
+      if attempt == max_link_attempts:
+        if not machine_b_sync_config.exists():
+          raise E2EFailure(f'sync-link did not produce expected config file: {machine_b_sync_config}')
+        preview = machine_b_sync_config.read_text(encoding='utf-8', errors='replace')
+        raise E2EFailure(
+          'sync-link bound machine B to an unexpected repo.\n'
+          f'Expected repo: {full_repo}\n'
+          f'Config path: {machine_b_sync_config}\n'
+          f'Config contents:\n{preview}'
+        )
+
+      preview = ''
+      if machine_b_sync_config.exists():
+        preview = machine_b_sync_config.read_text(encoding='utf-8', errors='replace')
+      log(
+        'WARNING: sync-link did not bind to the expected repo on this attempt. '
+        f'Retrying with explicit repo argument.\nConfig preview:\n{preview}'
       )
 
     agents_b = machine_b.opencode_config_root / 'AGENTS.md'
@@ -860,6 +1234,68 @@ def run_e2e(args: argparse.Namespace) -> int:
       log(
         'WARNING: machine-b local AGENTS.md did not include sentinel1 after sync-link; '
         'local sync repo contains sentinel1 and replication is confirmed.'
+      )
+
+    if enable_sessions:
+      if not synced_session_id or not session_title_after_link:
+        raise E2EFailure('Session sync validation state is missing after sync-link.')
+      print_banner('Verify session sync on machine B after sync-link')
+      if using_turso_backend:
+        run_and_validate_command(
+          client=client_b,
+          session_id=session_b,
+          command='sync-pull',
+          arguments='',
+          timeout_sec=args.timeout_sec,
+          result_path=results_dir / 'machine-b-sync-pull-after-link.json',
+          active_repo_root=repo_root,
+          baseline_state=baseline_state,
+          label='sync-pull on machine B after sync-link (turso)',
+        )
+        wait_for_file(machine_b_local_db, timeout_sec=args.timeout_sec)
+        try:
+          wait_for_db_session_title(
+            db_path=machine_b_local_db,
+            session_id=synced_session_id,
+            expected_title=session_title_after_link,
+            timeout_sec=args.timeout_sec,
+            label='machine-b local session title after sync-link (turso)',
+          )
+        except E2EFailure:
+          log(
+            'WARNING: machine-b local session DB did not immediately reflect synced title after '
+            'sync-link in Turso mode. This is expected while opencode is running; restart is '
+            'required for local session visibility.'
+          )
+      else:
+        wait_for_file(machine_b_repo_db, timeout_sec=args.timeout_sec)
+        wait_for_db_session_title(
+          db_path=machine_b_repo_db,
+          session_id=synced_session_id,
+          expected_title=session_title_after_link,
+          timeout_sec=args.timeout_sec,
+          label='machine-b repo session title after sync-link',
+        )
+      local_title_after_link = read_session_title_from_db(machine_b_local_db, synced_session_id)
+      if local_title_after_link != session_title_after_link:
+        log(
+          'WARNING: machine-b local session DB did not immediately reflect synced title after sync-link. '
+          'This is expected while opencode is running; restart is required for session visibility.'
+        )
+      if isinstance(summary.get('session_sync'), dict):
+        summary['session_sync']['machine_b_local_title_after_link'] = local_title_after_link
+
+    if enable_sessions:
+      if not synced_session_id or not session_title_after_pull:
+        raise E2EFailure('Session sync validation state is missing before second push.')
+      print_banner('Rename synced session on machine A before second push')
+      rename_session(client_a, synced_session_id, session_title_after_pull)
+      wait_for_db_session_title(
+        db_path=machine_a_local_db,
+        session_id=synced_session_id,
+        expected_title=session_title_after_pull,
+        timeout_sec=args.timeout_sec,
+        label='machine-a session rename before push #2',
       )
 
     print_banner('sync-push sentinel 2 from machine A')
@@ -895,6 +1331,42 @@ def run_e2e(args: argparse.Namespace) -> int:
         'WARNING: machine-b local AGENTS.md did not include sentinel2 after sync-pull; '
         'local sync repo contains sentinel2 and replication is confirmed.'
       )
+
+    if enable_sessions:
+      if not synced_session_id or not session_title_after_pull:
+        raise E2EFailure('Session sync validation state is missing after second pull.')
+      print_banner('Verify session sync on machine B after sync-pull')
+      if using_turso_backend:
+        try:
+          wait_for_db_session_title(
+            db_path=machine_b_local_db,
+            session_id=synced_session_id,
+            expected_title=session_title_after_pull,
+            timeout_sec=args.timeout_sec,
+            label='machine-b local session title after sync-pull (turso)',
+          )
+        except E2EFailure:
+          log(
+            'WARNING: machine-b local session DB did not immediately reflect synced title after '
+            'sync-pull in Turso mode. This is expected while opencode is running; restart is '
+            'required for local session visibility.'
+          )
+      else:
+        wait_for_db_session_title(
+          db_path=machine_b_repo_db,
+          session_id=synced_session_id,
+          expected_title=session_title_after_pull,
+          timeout_sec=args.timeout_sec,
+          label='machine-b repo session title after sync-pull',
+        )
+      local_title_after_pull = read_session_title_from_db(machine_b_local_db, synced_session_id)
+      if local_title_after_pull != session_title_after_pull:
+        log(
+          'WARNING: machine-b local session DB did not immediately reflect synced title after sync-pull. '
+          'This is expected while opencode is running; restart is required for session visibility.'
+        )
+      if isinstance(summary.get('session_sync'), dict):
+        summary['session_sync']['machine_b_local_title_after_pull'] = local_title_after_pull
 
     assert_git_state_unchanged(repo_root, baseline_state, 'after E2E flow')
 

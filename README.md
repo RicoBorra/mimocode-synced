@@ -75,6 +75,13 @@ Create `~/.config/opencode/opencode-synced.jsonc`:
   "includeSecrets": false,
   "includeMcpSecrets": false,
   "includeSessions": false,
+  "sessionBackend": {
+    "type": "git",
+    "turso": {
+      "syncIntervalSec": 15,
+      "autoSetup": true,
+    },
+  },
   "includePromptStash": false,
   "includeModelFavorites": true,
   "extraSecretPaths": [],
@@ -105,22 +112,58 @@ in a private repo, set `"includeMcpSecrets": true` (requires `includeSecrets`).
 
 ### Sessions (private repos only)
 
-Sync your opencode sessions (conversation history from `/sessions`) across machines by setting `"includeSessions": true`. This requires `includeSecrets` to also be enabled since sessions may contain sensitive data.
+Session sync remains opt-in via `"includeSessions": true` (and requires `"includeSecrets": true`).
+Session backend defaults to Git for backward compatibility. Turso is recommended for users running
+multiple active machines concurrently.
 
 ```jsonc
 {
   "repo": { ... },
   "includeSecrets": true,
-  "includeSessions": true
+  "includeSessions": true,
+  "sessionBackend": {
+    "type": "git", // or "turso"
+    "turso": {
+      "database": "my-opencode-config-sessions", // optional
+      "url": "libsql://...", // optional
+      "syncIntervalSec": 15, // default 15
+      "autoSetup": true, // default true
+    },
+  },
 }
 ```
 
-Synced session data:
+#### Git backend (`sessionBackend.type = "git"`, default)
 
-- `~/.local/share/opencode/storage/session/` - Session files
-- `~/.local/share/opencode/storage/message/` - Message history
-- `~/.local/share/opencode/storage/part/` - Message parts
-- `~/.local/share/opencode/storage/session_diff/` - Session diffs
+Best-effort session artifact sync via Git paths:
+
+- `~/.local/share/opencode/opencode.db`
+- `~/.local/share/opencode/opencode.db-wal` and `~/.local/share/opencode/opencode.db-shm`
+- `~/.local/share/opencode/storage/session/`
+- `~/.local/share/opencode/storage/message/`
+- `~/.local/share/opencode/storage/part/`
+- `~/.local/share/opencode/storage/session_diff/`
+
+This mode can conflict with concurrent writers.
+
+#### Turso backend (`sessionBackend.type = "turso"`)
+
+Concurrent-safe snapshot backend for sessions:
+
+- Session artifacts are **not** synced through Git paths.
+- Config + secrets continue using the normal Git sync flow.
+- Startup performs a Turso session pull before regular config sync.
+- Background loop runs `pull -> push -> pull` on the configured interval.
+- Manual `/sync-pull` and `/sync-push` trigger a foreground session sync cycle too.
+
+Turso setup is machine-local and idempotent:
+
+- Auto-installs Turso CLI when needed (best effort).
+- Runs headless Turso login flow when needed.
+- Creates/reuses the Turso database + token.
+- Stores credentials in a local machine-only file (`0600`) outside the sync repo.
+
+After pulling session changes, restart opencode to ensure the latest session state is loaded.
 
 ### Prompt Stash (private repos only)
 
@@ -175,6 +218,10 @@ Env var naming rules:
 | `/sync-pull` | Fetch and apply remote config |
 | `/sync-push` | Commit and push local changes |
 | `/sync-enable-secrets` | Enable secrets sync (private repos only) |
+| `/sync-sessions-backend <git\|turso>` | Switch session backend |
+| `/sync-sessions-setup-turso` | Install/auth/provision Turso on this machine |
+| `/sync-sessions-migrate-turso` | Bootstrap + switch from Git session sync to Turso |
+| `/sync-sessions-cleanup-git` | Remove deprecated Git session artifacts after migration |
 | `/sync-resolve` | Auto-resolve uncommitted changes using AI |
 
 <details>

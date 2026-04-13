@@ -105,6 +105,57 @@ describe('buildSyncPlan', () => {
     expect(plan.extraConfigs.allowlist.length).toBe(1);
   });
 
+  it('includes sqlite and legacy session paths when includeSessions is true', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: true,
+      includeSessions: true,
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    const expectedSessionPaths = [
+      '/.local/share/opencode/opencode.db',
+      '/.local/share/opencode/storage/session',
+      '/.local/share/opencode/storage/message',
+      '/.local/share/opencode/storage/part',
+      '/.local/share/opencode/storage/session_diff',
+    ];
+
+    for (const suffix of expectedSessionPaths) {
+      const sessionItem = plan.items.find((item) => item.localPath.endsWith(suffix));
+      expect(sessionItem).toBeTruthy();
+      expect(sessionItem?.isSecret).toBe(true);
+      expect(sessionItem?.preserveWhenMissing).toBe(true);
+    }
+  });
+
+  it('excludes git session paths when using turso session backend', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: true,
+      includeSessions: true,
+      sessionBackend: {
+        type: 'turso',
+      },
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    const sessionItems = plan.items.filter(
+      (item) =>
+        item.localPath.endsWith('/.local/share/opencode/opencode.db') ||
+        item.localPath.includes('/.local/share/opencode/storage/session') ||
+        item.localPath.includes('/.local/share/opencode/storage/message') ||
+        item.localPath.includes('/.local/share/opencode/storage/part') ||
+        item.localPath.includes('/.local/share/opencode/storage/session_diff')
+    );
+
+    expect(sessionItems).toEqual([]);
+  });
+
   it('excludes auth files when using 1password backend', () => {
     const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
     const locations = resolveSyncLocations(env, 'linux');
