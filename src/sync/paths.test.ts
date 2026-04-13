@@ -87,6 +87,136 @@ describe('buildSyncPlan', () => {
     expect(plan.extraConfigs.allowlist.length).toBe(0);
   });
 
+  it('filters default sync items from extra config paths', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const customConfigPath = `${locations.configRoot}/custom.json`;
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+      extraConfigPaths: [
+        `${locations.configRoot}/agent`,
+        `${locations.configRoot}/opencode.json`,
+        customConfigPath,
+      ],
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+
+    expect(plan.extraConfigs.allowlist).toEqual([customConfigPath]);
+  });
+
+  it('includes skills directory in default sync items', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    const skillsItem = plan.items.find((item) =>
+      item.localPath.endsWith('/.config/opencode/skills')
+    );
+
+    expect(skillsItem).toBeTruthy();
+    expect(skillsItem?.type).toBe('dir');
+
+    const disabledPlan = buildSyncPlan(
+      normalizeSyncConfig({ ...config, includeOpencodeSkills: false }),
+      locations,
+      '/repo',
+      'linux'
+    );
+    const disabledSkillsItem = disabledPlan.items.find((item) =>
+      item.localPath.endsWith('/.config/opencode/skills')
+    );
+    expect(disabledSkillsItem).toBeUndefined();
+  });
+
+  it('filters skills path from extra config paths', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+      extraConfigPaths: [`${locations.configRoot}/skills`],
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+
+    expect(plan.extraConfigs.allowlist.length).toBe(0);
+  });
+
+  it('keeps non-default extra config paths when skills is also listed', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const customConfigPath = `${locations.configRoot}/custom.json`;
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+      extraConfigPaths: [`${locations.configRoot}/skills`, customConfigPath],
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+
+    expect(plan.extraConfigs.allowlist).toEqual([customConfigPath]);
+  });
+
+  it('includes home .agents directory by default and allows disabling', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    const agentsItem = plan.items.find((item) => item.localPath.endsWith('/.agents'));
+
+    expect(agentsItem).toBeTruthy();
+    expect(agentsItem?.repoPath.endsWith('/config/.agents')).toBe(true);
+    expect(agentsItem?.type).toBe('dir');
+
+    const disabledPlan = buildSyncPlan(
+      normalizeSyncConfig({ ...config, includeAgentsDir: false }),
+      locations,
+      '/repo',
+      'linux'
+    );
+    const disabledAgentsItem = disabledPlan.items.find((item) =>
+      item.localPath.endsWith('/.agents')
+    );
+    expect(disabledAgentsItem).toBeUndefined();
+  });
+
+  it('filters home .agents path from extra config paths', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+      extraConfigPaths: ['~/.agents'],
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    expect(plan.extraConfigs.allowlist.length).toBe(0);
+  });
+
+  it('keeps non-default extra config paths when home .agents is also listed', () => {
+    const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
+    const locations = resolveSyncLocations(env, 'linux');
+    const customConfigPath = `${locations.configRoot}/custom.json`;
+    const config: SyncConfig = {
+      repo: { owner: 'acme', name: 'config' },
+      includeSecrets: false,
+      extraConfigPaths: ['~/.agents', customConfigPath],
+    };
+
+    const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
+    expect(plan.extraConfigs.allowlist).toEqual([customConfigPath]);
+  });
+
   it('includes secrets when includeSecrets is true', () => {
     const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
     const locations = resolveSyncLocations(env, 'linux');

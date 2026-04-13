@@ -81,6 +81,21 @@ describe('normalizeSyncConfig', () => {
     expect(normalized.includeModelFavorites).toBe(true);
   });
 
+  it('enables skills and home .agents by default', () => {
+    const normalized = normalizeSyncConfig({});
+    expect(normalized.includeOpencodeSkills).toBe(true);
+    expect(normalized.includeAgentsDir).toBe(true);
+  });
+
+  it('allows disabling skills and home .agents', () => {
+    const normalized = normalizeSyncConfig({
+      includeOpencodeSkills: false,
+      includeAgentsDir: false,
+    });
+    expect(normalized.includeOpencodeSkills).toBe(false);
+    expect(normalized.includeAgentsDir).toBe(false);
+  });
+
   it('defaults extra path lists when omitted', () => {
     const normalized = normalizeSyncConfig({ includeSecrets: true });
     expect(normalized.extraSecretPaths).toEqual([]);

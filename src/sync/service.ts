@@ -74,6 +74,8 @@ interface InitOptions {
   includeModelFavorites?: boolean;
   setupTurso?: boolean;
   migrateSessions?: boolean;
+  includeOpencodeSkills?: boolean;
+  includeAgentsDir?: boolean;
   create?: boolean;
   private?: boolean;
   extraSecretPaths?: string[];
@@ -677,6 +679,8 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           : 'git (best effort, may conflict with concurrent writers)';
       const includePromptStash = config.includePromptStash ? 'enabled' : 'disabled';
       const includeModelFavorites = config.includeModelFavorites ? 'enabled' : 'disabled';
+      const includeOpencodeSkills = config.includeOpencodeSkills ? 'enabled' : 'disabled';
+      const includeAgentsDir = config.includeAgentsDir ? 'enabled' : 'disabled';
       const secretsBackend = config.secretsBackend?.type ?? 'none';
       const lastPull = state.lastPull ?? 'never';
       const lastPush = state.lastPush ?? 'never';
@@ -714,6 +718,8 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         `Last session push: ${lastSessionPush}`,
         `Prompt stash: ${includePromptStash}`,
         `Model favorites: ${includeModelFavorites}`,
+        `Skills: ${includeOpencodeSkills}`,
+        `Home .agents: ${includeAgentsDir}`,
         `Last pull: ${lastPull}`,
         `Last push: ${lastPush}`,
         `Working tree: ${changesLabel}`,
@@ -1446,6 +1452,8 @@ async function buildConfigFromInit($: Shell, options: InitOptions) {
       : undefined,
     includePromptStash: options.includePromptStash ?? false,
     includeModelFavorites: options.includeModelFavorites ?? true,
+    includeOpencodeSkills: options.includeOpencodeSkills ?? true,
+    includeAgentsDir: options.includeAgentsDir ?? true,
     extraSecretPaths: options.extraSecretPaths ?? [],
     extraConfigPaths: options.extraConfigPaths ?? [],
     localRepoPath: options.localRepoPath,

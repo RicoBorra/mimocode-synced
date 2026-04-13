@@ -59,6 +59,8 @@ export interface SyncConfig {
   sessionBackend?: SessionBackendConfig;
   includePromptStash?: boolean;
   includeModelFavorites?: boolean;
+  includeOpencodeSkills?: boolean;
+  includeAgentsDir?: boolean;
   secretsBackend?: SecretsBackendConfig;
   extraSecretPaths?: string[];
   extraConfigPaths?: string[];
@@ -71,6 +73,8 @@ export interface NormalizedSyncConfig extends SyncConfig {
   sessionBackend: NormalizedSessionBackendConfig;
   includePromptStash: boolean;
   includeModelFavorites: boolean;
+  includeOpencodeSkills: boolean;
+  includeAgentsDir: boolean;
   secretsBackend?: SecretsBackendConfig;
   extraSecretPaths: string[];
   extraConfigPaths: string[];
@@ -169,6 +173,8 @@ export function isTursoSessionBackend(config: SyncConfig | NormalizedSyncConfig)
 export function normalizeSyncConfig(config: SyncConfig): NormalizedSyncConfig {
   const includeSecrets = Boolean(config.includeSecrets);
   const includeModelFavorites = config.includeModelFavorites !== false;
+  const includeOpencodeSkills = config.includeOpencodeSkills !== false;
+  const includeAgentsDir = config.includeAgentsDir !== false;
   return {
     includeSecrets,
     includeMcpSecrets: includeSecrets ? Boolean(config.includeMcpSecrets) : false,
@@ -176,6 +182,8 @@ export function normalizeSyncConfig(config: SyncConfig): NormalizedSyncConfig {
     sessionBackend: normalizeSessionBackend(config.sessionBackend),
     includePromptStash: Boolean(config.includePromptStash),
     includeModelFavorites,
+    includeOpencodeSkills,
+    includeAgentsDir,
     secretsBackend: normalizeSecretsBackend(config.secretsBackend),
     extraSecretPaths: Array.isArray(config.extraSecretPaths) ? config.extraSecretPaths : [],
     extraConfigPaths: Array.isArray(config.extraConfigPaths) ? config.extraConfigPaths : [],

@@ -160,6 +160,11 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
         .boolean()
         .optional()
         .describe('Sync model favorites (state/model.json)'),
+      includeOpencodeSkills: tool.schema
+        .boolean()
+        .optional()
+        .describe('Sync ~/.config/opencode/skills directory'),
+      includeAgentsDir: tool.schema.boolean().optional().describe('Sync ~/.agents directory'),
       create: tool.schema.boolean().optional().describe('Create repo if missing'),
       private: tool.schema.boolean().optional().describe('Create repo as private'),
       extraSecretPaths: tool.schema.array(tool.schema.string()).optional(),
@@ -194,6 +199,8 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
             includeModelFavorites: args.includeModelFavorites,
             setupTurso: args.setupTurso,
             migrateSessions: args.migrateSessions,
+            includeOpencodeSkills: args.includeOpencodeSkills,
+            includeAgentsDir: args.includeAgentsDir,
             create: args.create,
             private: args.private,
             extraSecretPaths: args.extraSecretPaths,

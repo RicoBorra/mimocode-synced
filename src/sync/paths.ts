@@ -57,6 +57,8 @@ const SESSION_DIRS = ['storage/session', 'storage/message', 'storage/part', 'sto
 const SESSION_DB_FILE = 'opencode.db';
 const PROMPT_STASH_FILES = ['prompt-stash.jsonl', 'prompt-history.jsonl'];
 const MODEL_FAVORITES_FILE = 'model.json';
+const SKILLS_DIR = 'skills';
+const HOME_AGENTS_DIR = '.agents';
 
 export function resolveHomeDir(
   env: NodeJS.ProcessEnv = process.env,
@@ -216,6 +218,26 @@ export function buildSyncPlan(
     });
   }
 
+  if (config.includeOpencodeSkills !== false) {
+    items.push({
+      localPath: path.join(configRoot, SKILLS_DIR),
+      repoPath: path.join(repoConfigRoot, SKILLS_DIR),
+      type: 'dir',
+      isSecret: false,
+      isConfigFile: false,
+    });
+  }
+
+  if (config.includeAgentsDir !== false) {
+    items.push({
+      localPath: path.join(locations.xdg.homeDir, HOME_AGENTS_DIR),
+      repoPath: path.join(repoConfigRoot, HOME_AGENTS_DIR),
+      type: 'dir',
+      isSecret: false,
+      isConfigFile: false,
+    });
+  }
+
   if (config.includeModelFavorites !== false) {
     items.push({
       localPath: path.join(stateRoot, MODEL_FAVORITES_FILE),
@@ -299,7 +321,8 @@ export function buildSyncPlan(
   );
 
   const extraConfigPaths = (config.extraConfigPaths ?? []).filter(
-    (entry) => !isSamePath(entry, locations.syncConfigPath, locations.xdg.homeDir, platform)
+    (entry) =>
+      !items.some((item) => isSamePath(entry, item.localPath, locations.xdg.homeDir, platform))
   );
 
   const extraConfigs = buildExtraPathPlan(
