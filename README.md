@@ -14,23 +14,65 @@ Sync global mimocode configuration across machines via a GitHub repo, with optio
 - Per-machine overrides via `mimocode-synced.overrides.jsonc`
 - Custom `/sync-*` commands and `mimocode_sync` tool
 
-## Requirements
+## Setup
+
+### Requirements
 
 - GitHub CLI (`gh`) installed and authenticated (`gh auth login`)
 - Git installed and available on PATH
+- Node.js (for `npm install` and `npm run build`)
 
-## Setup
+### Install
 
-Enable the plugin in your global mimocode config (mimocode will install it on next run):
+1. Clone and build the plugin:
+
+```bash
+git clone https://github.com/RicoBorra/mimocode-synced.git
+cd mimocode-synced
+npm install
+npm run build
+```
+
+2. Copy the plugin to mimocode's plugin directory:
+
+```bash
+mkdir -p ~/.config/mimocode/plugins
+cp -r dist ~/.config/mimocode/plugins/
+cp package.json ~/.config/mimocode/plugins/
+```
+
+3. Register the plugin in `~/.config/mimocode/mimocode.json`:
 
 ```jsonc
 {
   "$schema": "https://mimo.xiaomi.com//config.json",
-  "plugin": ["mimocode-synced"],
+  "plugin": ["./plugins/dist/index.js"]
 }
 ```
 
-mimocode does not auto-update plugins. To update, modify the version number in your config file.
+4. Install the plugin SDK (workaround — mimocode tries to install `@mimo-ai/plugin@0.1.0` which doesn't exist yet on npm):
+
+```bash
+cd ~/.config/mimocode
+npm init -y
+npm install @mimo-ai/plugin@0.1.1-preview.1
+```
+
+> **Note**: Step 4 is temporary. Once Xiaomi publishes `@mimo-ai/plugin@0.1.0` to npm, mimocode's built-in installer will handle this automatically and you can delete `~/.config/mimocode/package.json` and `~/.config/mimocode/node_modules/`.
+
+5. Restart mimocode. Run `/sync-init` to set up your sync repo.
+
+### Updating
+
+```bash
+cd mimocode-synced
+git pull
+npm install
+npm run build
+cp dist/index.js ~/.config/mimocode/plugins/dist/
+```
+
+Restart mimocode to pick up the update.
 
 ## Configure
 
@@ -287,7 +329,7 @@ bun -e '
   ["mimocode.json", "mimocode.jsonc"].forEach(f => {
     const p = path.join(configDir, f);
     if (fs.existsSync(p)) {
-      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"mimocode-synced"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
+      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"\.\/plugins\/dist\/index\.js"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
       if (c !== u) fs.writeFileSync(p, u);
     }
   });
@@ -309,7 +351,15 @@ bun -e '
 ```
 
 ### Manual steps
-1. Remove `"mimocode-synced"` from the `plugin` array in `~/.config/mimocode/mimocode.json` (or `.jsonc`).
+1. Remove `"./plugins/dist/index.js"` from the `plugin` array in `~/.config/mimocode/mimocode.json` (or `.jsonc`).
+2. Delete the plugin files:
+   ```bash
+   rm -rf ~/.config/mimocode/plugins
+   ```
+3. Clean up the SDK workaround (if no other plugins need it):
+   ```bash
+   rm -rf ~/.config/mimocode/node_modules ~/.config/mimocode/package.json ~/.config/mimocode/package-lock.json
+   ```
 2. Delete the local configuration and state:
    ```bash
    rm ~/.config/mimocode/mimocode-synced.jsonc
@@ -385,7 +435,7 @@ Then set `~/.config/mimocode/mimocode.json` to use:
 
 ```jsonc
 {
-  "plugin": ["mimocode-synced"]
+  "plugin": ["./plugins/dist/index.js"]
 }
 ```
 

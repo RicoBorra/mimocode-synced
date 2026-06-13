@@ -8,7 +8,7 @@ A fork of [opencode-synced](https://github.com/iHildy/opencode-synced) adapted f
 
 ## Current state
 
-The code compiles, all 79 tests pass, lint is clean. The plugin is installed at `~/.config/mimocode/plugins/` with the correct `dist/` structure. **But the `/sync-init` command does not appear in MiMo Code's TUI.**
+The code compiles, all 79 tests pass, lint is clean. The plugin is installed at `~/.config/mimocode/plugins/` with the correct `dist/` structure. **The `/sync-init` command should now appear after restarting MiMo Code** (see "Fix applied" below).
 
 ## What was done
 
@@ -20,23 +20,15 @@ The code compiles, all 79 tests pass, lint is clean. The plugin is installed at 
 4. Inlined the `tool()` helper (it's just `return input` + `tool.schema = z`)
 5. Plugin now has zero external runtime deps except `zod`
 
-## What's blocking
+## What's blocking (RESOLVED — see "Fix applied" below)
 
-**The plugin loads but commands don't register.** The MiMo Code log from last attempt shows:
+**Root causes found:**
 
-```
-INFO  service=plugin path=file:///home/nemo/.config/mimocode/plugins/index.js loading plugin
-```
+1. **`zod` was not available at runtime** — the plugin imports `zod` but it wasn't installed in the plugins directory. When mimocode loaded the plugin, the `import { z } from 'zod'` failed, causing the entire plugin initialization to fail silently. The `config()` hook never ran, so slash commands never registered.
 
-But then the session errors and the plugin's `config()` hook (which registers slash commands) never runs. Possible causes:
+2. **`@mimo-ai/plugin@0.1.0` install failure** — mimocode's config service tries to install `@mimo-ai/plugin@0.1.0` for each config directory. This version doesn't exist on npm (only preview versions: `0.1.0-preview.0`, `0.1.1-preview.0`, `0.1.1-preview.1`). The install failure was logged as a WARN but may have also blocked the plugin loading pipeline.
 
-1. **Plugin export format mismatch**: MiMo Code expects `export const plugin: Plugin` or `export default` but our plugin exports `opencodeConfigSync`, `mimocodeConfigSync`, `mimocodeSynced`, `opencodeSynced`, and `default`. The default export is `mimocodeConfigSync`. **Check what export name MiMo Code looks for** — it might expect a specific name like `plugin` or `default`.
-
-2. **Plugin function signature**: Our function signature is `async (ctx) => { tool, event, config }`. MiMo Code's `Plugin` type is `(input: PluginInput, options?) => Promise<Hooks>`. The `Hooks` type has `tool`, `event`, `config` — this should match. But verify the return shape.
-
-3. **`config()` hook not being called**: Even if the plugin loads, if `config()` isn't called, slash commands won't register. Check if MiMo Code calls `config()` on all loaded plugins.
-
-4. **`zod` import failing**: The plugin imports `zod` at runtime. If zod isn't available in MiMo Code's plugin sandbox, the import fails silently and the plugin never initializes. **This is the most likely cause.**
+3. **Plugin was not bundled** — the dist output was multiple files (`index.js`, `sync/*.js`) with external imports. The plugin needed to be a single self-contained bundle.
 
 ## Key technical details
 
@@ -50,16 +42,25 @@ But then the session errors and the plugin's `config()` hook (which registers sl
 - **Slash commands**: Registered via the `config()` hook by setting `config.command[name] = { template, description }`
 - **The `tool` hook** returns `{ mimocode_sync: toolDefinition }` — this registers a custom tool
 
-## What to try next
+## Fix applied
 
-1. **Check if `zod` is available**: Add a `console.log` or `try/catch` around the zod import in the plugin to see if it fails. If zod isn't available, bundle it or inline the tiny bit we need (just `z.string()`, `z.boolean()`, `z.enum()`, `z.array()`).
+1. **Bundled the plugin with esbuild** — Updated `package.json` build script to use `esbuild` to bundle `dist/index.js` into a single self-contained file (587KB). This includes `zod` so the plugin has zero external runtime dependencies. Build command: `npm run build`.
 
-2. **Check the exact export MiMo Code expects**: Look at MiMo Code's plugin loader source or try different export patterns:
-   - `export default function(ctx) { ... }`
-   - `export const plugin: Plugin = async (ctx) => { ... }`
-   - `export const server: Plugin = async (ctx) => { ... }` (MiMo Code uses `PluginModule` type with `server` field)
+2. **Installed `@mimo-ai/plugin@0.1.1-preview.1`** — Created `~/.config/mimocode/package.json` with the preview SDK version and ran `npm install`. This resolves the `NpmInstallFailedError` that was blocking the config service.
 
-3. **Test plugin loading in isolation**: Create a minimal plugin that just logs something:
+3. **Export format** — Mimocode's plugin loader iterates `Object.values(module)` and throws if any export is not a function. The plugin only exports `server` and `default` (both functions). The `id` export and alias exports (`mimocodeSynced`, `opencodeConfigSync`, `opencodeSynced`) were removed because they broke the loader.
+
+4. **Plugin must be registered in config** — `~/.config/mimocode/mimocode.json` needs `"plugin": ["./plugins/dist/index.js"]` for the plugin to be discovered.
+
+**To verify**: Restart MiMo Code and check if `/sync-init` appears as a slash command.
+
+## What to try next (if still not working)
+
+1. **Check the log** — `~/.local/share/mimocode/log/` newest file. Look for `service=plugin` entries.
+
+2. **Check if commands appear as tools instead of slash commands** — The `tool` hook registers `mimocode_sync` as a tool, not a slash command. The slash commands (`/sync-init` etc.) are registered via the `config` hook. If `config()` isn't called, only the tool would be available — ask the AI to "use the mimocode_sync tool with command init".
+
+3. **Test plugin loading in isolation** — Create a minimal plugin that just logs something:
    ```js
    export default async (ctx) => {
      ctx.client.app.log({ body: { service: 'test', level: 'info', message: 'Plugin loaded!' } });
@@ -67,8 +68,6 @@ But then the session errors and the plugin's `config()` hook (which registers sl
    };
    ```
    Put it in `~/.config/mimocode/plugins/test.js` and see if the log message appears.
-
-4. **Check if commands appear as tools instead of slash commands**: The `tool` hook registers `mimocode_sync` as a tool, not a slash command. The slash commands (`/sync-init` etc.) are registered via the `config` hook. If `config()` isn't called, only the tool would be available — ask the AI to "use the mimocode_sync tool with command init".
 
 ## Files to examine
 
