@@ -25,6 +25,7 @@ Enable the plugin in your global mimocode config (mimocode will install it on ne
 
 ```jsonc
 {
+  "$schema": "https://mimo.xiaomi.com//config.json",
   "plugin": ["mimocode-synced"],
 }
 ```
