@@ -15,3 +15,6 @@ opencode-plugin-template/
 opencode-docs-*/
 mimocode-plugin-template/
 mimocode-docs-*/
+*.tgz
+package-lock.json
+.mimocode/
