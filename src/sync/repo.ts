@@ -183,6 +183,15 @@ async function getOriginRemoteUrl($: Shell, repoDir: string): Promise<string | n
   }
 }
 
+export async function hasCommits($: Shell, repoDir: string): Promise<boolean> {
+  try {
+    await $`git -C ${repoDir} rev-parse HEAD`.quiet();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function hasLocalChanges($: Shell, repoDir: string): Promise<boolean> {
   const lines = await getStatusLines($, repoDir);
   return lines.length > 0;

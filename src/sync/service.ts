@@ -27,6 +27,7 @@ import {
   findSyncRepo,
   getAuthenticatedUser,
   getRepoStatus,
+  hasCommits,
   hasLocalChanges,
   isRepoCloned,
   parseRepoReference,
@@ -767,7 +768,8 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           initNotes.push(`Session bootstrap: ${cycle.summary}`);
         }
 
-        if (created) {
+        const needsInitialSync = created || !(await hasCommits(ctx.$, repoRoot));
+        if (needsInitialSync) {
           const overrides = await loadOverrides(locations);
           const plan = buildSyncPlan(config, locations, repoRoot);
           await syncLocalToRepo(plan, overrides, {
