@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseRepoReference, parseRepoVisibility } from './repo.js';
+import { parseRemoteOwnerName, parseRepoReference, parseRepoVisibility } from './repo.js';
 
 describe('parseRepoVisibility', () => {
   it('parses private status', () => {
@@ -64,5 +64,43 @@ describe('parseRepoReference', () => {
     expect(parseRepoReference('acme/mimocode/sync', 'ignored')).toBeNull();
     expect(parseRepoReference('git@notgithub:acme/mimocode-sync', 'ignored')).toBeNull();
     expect(parseRepoReference('   ', 'ihildy')).toBeNull();
+  });
+});
+
+describe('parseRemoteOwnerName', () => {
+  it('parses SSH remote URLs', () => {
+    expect(parseRemoteOwnerName('git@github.com:RicoBorra/mimocode-synced.git')).toEqual({
+      owner: 'RicoBorra',
+      name: 'mimocode-synced',
+    });
+  });
+
+  it('parses SSH remote URLs without .git suffix', () => {
+    expect(parseRemoteOwnerName('git@github.com:acme/my-config')).toEqual({
+      owner: 'acme',
+      name: 'my-config',
+    });
+  });
+
+  it('parses HTTPS remote URLs', () => {
+    expect(parseRemoteOwnerName('https://github.com/acme/my-config.git')).toEqual({
+      owner: 'acme',
+      name: 'my-config',
+    });
+  });
+
+  it('parses HTTPS remote URLs without .git suffix', () => {
+    expect(parseRemoteOwnerName('https://github.com/acme/my-config')).toEqual({
+      owner: 'acme',
+      name: 'my-config',
+    });
+  });
+
+  it('returns null for non-GitHub URLs', () => {
+    expect(parseRemoteOwnerName('https://gitlab.com/acme/repo')).toBeNull();
+  });
+
+  it('returns null for garbage input', () => {
+    expect(parseRemoteOwnerName('not-a-url')).toBeNull();
   });
 });

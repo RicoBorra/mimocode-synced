@@ -45,12 +45,48 @@ export function resolveRepoBranch(config: SyncConfig, fallback = 'main'): string
   return fallback;
 }
 
+export function parseRemoteOwnerName(remoteUrl: string): { owner: string; name: string } | null {
+  const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/\s]+?)(?:\.git)?$/);
+  if (sshMatch) {
+    return { owner: sshMatch[1], name: sshMatch[2] };
+  }
+
+  try {
+    const parsed = new URL(remoteUrl.trim());
+    if (parsed.hostname !== 'github.com' && parsed.hostname !== 'www.github.com') return null;
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (parts.length !== 2) return null;
+    const name = parts[1].replace(/\.git$/i, '');
+    return { owner: parts[0], name };
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureRepoCloned(
   $: Shell,
   config: SyncConfig,
   repoDir: string
 ): Promise<void> {
   if (await isRepoCloned(repoDir)) {
+    const repoIdentifier = resolveRepoIdentifier(config);
+    const expected = parseRepoReference(repoIdentifier, '');
+    if (expected) {
+      const remoteUrl = await getOriginRemoteUrl($, repoDir);
+      const actual = remoteUrl ? parseRemoteOwnerName(remoteUrl) : null;
+      if (
+        !actual ||
+        actual.owner.toLowerCase() !== expected.owner.toLowerCase() ||
+        actual.name.toLowerCase() !== expected.name.toLowerCase()
+      ) {
+        try {
+          const normalizedIdentifier = `${expected.owner}/${expected.name}`;
+          await $`git -C ${repoDir} remote set-url origin git@github.com:${normalizedIdentifier}.git`.quiet();
+        } catch (error) {
+          throw new SyncCommandError(`Failed to update repo remote: ${formatError(error)}`);
+        }
+      }
+    }
     return;
   }
 
@@ -136,6 +172,15 @@ export async function getRepoStatus($: Shell, repoDir: string): Promise<RepoStat
   const branch = await getCurrentBranch($, repoDir);
   const changes = await getStatusLines($, repoDir);
   return { branch, changes };
+}
+
+async function getOriginRemoteUrl($: Shell, repoDir: string): Promise<string | null> {
+  try {
+    const output = await $`git -C ${repoDir} remote get-url origin`.quiet().text();
+    return output.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function hasLocalChanges($: Shell, repoDir: string): Promise<boolean> {
