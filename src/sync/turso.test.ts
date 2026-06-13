@@ -22,18 +22,18 @@ function createLocations(): SyncLocations {
       dataDir: '/home/test/.local/share',
       stateDir: '/home/test/.local/state',
     },
-    configRoot: '/home/test/.config/opencode',
-    syncConfigPath: '/home/test/.config/opencode/opencode-synced.jsonc',
-    overridesPath: '/home/test/.config/opencode/opencode-synced.overrides.jsonc',
-    statePath: '/home/test/.local/share/opencode/sync-state.json',
-    defaultRepoDir: '/home/test/.local/share/opencode/opencode-synced/repo',
+    configRoot: '/home/test/.config/mimocode',
+    syncConfigPath: '/home/test/.config/mimocode/mimocode-synced.jsonc',
+    overridesPath: '/home/test/.config/mimocode/mimocode-synced.overrides.jsonc',
+    statePath: '/home/test/.local/share/mimocode/sync-state.json',
+    defaultRepoDir: '/home/test/.local/share/mimocode/mimocode-synced/repo',
   };
 }
 
 describe('resolveTursoDatabaseName', () => {
   it('uses explicit database name when configured', () => {
     const config = normalizeSyncConfig({
-      repo: { owner: 'acme', name: 'my-opencode-config' },
+      repo: { owner: 'acme', name: 'my-mimocode-config' },
       includeSessions: true,
       sessionBackend: {
         type: 'turso',
@@ -48,12 +48,12 @@ describe('resolveTursoDatabaseName', () => {
 
   it('derives database name from repo when not explicitly configured', () => {
     const config = normalizeSyncConfig({
-      repo: { owner: 'acme', name: 'my-opencode-config' },
+      repo: { owner: 'acme', name: 'my-mimocode-config' },
       includeSessions: true,
       sessionBackend: { type: 'turso' },
     });
 
-    expect(resolveTursoDatabaseName(config)).toBe('my-opencode-config-sessions');
+    expect(resolveTursoDatabaseName(config)).toBe('my-mimocode-config-sessions');
   });
 });
 
@@ -88,12 +88,12 @@ describe('path helpers', () => {
   it('resolves credential path and session db paths', () => {
     const locations = createLocations();
     expect(resolveTursoCredentialPath(locations)).toBe(
-      '/home/test/.local/share/opencode/opencode-synced/turso-session.json'
+      '/home/test/.local/share/mimocode/mimocode-synced/turso-session.json'
     );
     expect(resolveSessionDbPaths(locations)).toEqual({
-      dbPath: '/home/test/.local/share/opencode/opencode.db',
-      walPath: '/home/test/.local/share/opencode/opencode.db-wal',
-      shmPath: '/home/test/.local/share/opencode/opencode.db-shm',
+      dbPath: '/home/test/.local/share/mimocode/mimocode.db',
+      walPath: '/home/test/.local/share/mimocode/mimocode.db-wal',
+      shmPath: '/home/test/.local/share/mimocode/mimocode.db-shm',
     });
   });
 });

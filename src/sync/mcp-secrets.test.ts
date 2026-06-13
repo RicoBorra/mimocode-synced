@@ -92,11 +92,11 @@ describe('extractMcpSecrets', () => {
       mcp: {
         github: {
           headers: {
-            Authorization: 'Bearer {env:opencode_mcp_GITHUB_AUTHORIZATION}',
+            Authorization: 'Bearer {env:mimocode_mcp_GITHUB_AUTHORIZATION}',
           },
           oauth: {
             clientId: 'public',
-            clientSecret: '{env:opencode_mcp_GITHUB_OAUTH_CLIENT_SECRET}',
+            clientSecret: '{env:mimocode_mcp_GITHUB_OAUTH_CLIENT_SECRET}',
           },
         },
       },
@@ -120,7 +120,7 @@ describe('extractMcpSecrets', () => {
       mcp: {
         gitlab: {
           headers: {
-            Authorization: 'Token {env:opencode_mcp_GITLAB_AUTHORIZATION}',
+            Authorization: 'Token {env:mimocode_mcp_GITLAB_AUTHORIZATION}',
           },
         },
       },

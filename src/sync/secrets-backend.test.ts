@@ -35,8 +35,8 @@ describe('resolveSecretsBackendConfig', () => {
         secretsBackend: {
           type: '1password',
           documents: {
-            authJson: 'opencode-auth.json',
-            mcpAuthJson: 'opencode-mcp-auth.json',
+            authJson: 'mimocode-auth.json',
+            mcpAuthJson: 'mimocode-mcp-auth.json',
           },
         },
       })
@@ -75,8 +75,8 @@ describe('resolveSecretsBackendConfig', () => {
           type: '1password',
           vault: 'Personal',
           documents: {
-            authJson: 'opencode-auth.json',
-            mcpAuthJson: 'opencode-mcp-auth.json',
+            authJson: 'mimocode-auth.json',
+            mcpAuthJson: 'mimocode-mcp-auth.json',
           },
         },
       })
@@ -85,14 +85,14 @@ describe('resolveSecretsBackendConfig', () => {
     expect(resolution.state).toBe('ok');
     if (resolution.state === 'ok') {
       expect(resolution.config.vault).toBe('Personal');
-      expect(resolution.config.authJson).toBe('opencode-auth.json');
+      expect(resolution.config.authJson).toBe('mimocode-auth.json');
     }
   });
 });
 
 describe('computeSecretsHash', () => {
   it('changes when auth files change', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-sync-'));
+    const root = await mkdtemp(path.join(os.tmpdir(), 'mimocode-sync-'));
     const env = {
       HOME: root,
       XDG_DATA_HOME: path.join(root, 'data'),
@@ -102,7 +102,7 @@ describe('computeSecretsHash', () => {
 
     try {
       const locations = resolveSyncLocations(env, 'linux');
-      const dataRoot = path.join(locations.xdg.dataDir, 'opencode');
+      const dataRoot = path.join(locations.xdg.dataDir, 'mimocode');
       const authPath = path.join(dataRoot, 'auth.json');
       const mcpPath = path.join(dataRoot, 'mcp-auth.json');
 

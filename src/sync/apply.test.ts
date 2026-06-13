@@ -29,7 +29,7 @@ function createPlan(repoRoot: string, homeDir: string, items: SyncItem[]): SyncP
 }
 
 async function withTempDir(run: (root: string) => Promise<void>): Promise<void> {
-  const root = await fs.mkdtemp(path.join(tmpdir(), 'opencode-sync-apply-'));
+  const root = await fs.mkdtemp(path.join(tmpdir(), 'mimocode-sync-apply-'));
   try {
     await run(root);
   } finally {
@@ -38,12 +38,12 @@ async function withTempDir(run: (root: string) => Promise<void>): Promise<void> 
 }
 
 describe('syncLocalToRepo preserveWhenMissing', () => {
-  it('copies updated opencode.db from local to repo when present', async () => {
+  it('copies updated mimocode.db from local to repo when present', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
-      const localDbPath = path.join(localRoot, 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
+      const localDbPath = path.join(localRoot, 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.mkdir(path.dirname(localDbPath), { recursive: true });
       await fs.writeFile(repoDbPath, 'old-db-content', 'utf8');
@@ -67,12 +67,12 @@ describe('syncLocalToRepo preserveWhenMissing', () => {
     });
   });
 
-  it('copies sqlite sidecars with opencode.db when present', async () => {
+  it('copies sqlite sidecars with mimocode.db when present', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
-      const localDbPath = path.join(localRoot, 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
+      const localDbPath = path.join(localRoot, 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.mkdir(path.dirname(localDbPath), { recursive: true });
       await fs.writeFile(localDbPath, 'new-db-content', 'utf8');
@@ -98,11 +98,11 @@ describe('syncLocalToRepo preserveWhenMissing', () => {
     });
   });
 
-  it('keeps repo opencode.db when local file is missing', async () => {
+  it('keeps repo mimocode.db when local file is missing', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.writeFile(repoDbPath, 'remote-db-content', 'utf8');
       await fs.writeFile(`${repoDbPath}-wal`, 'remote-wal-content', 'utf8');
@@ -110,7 +110,7 @@ describe('syncLocalToRepo preserveWhenMissing', () => {
 
       const plan = createPlan(repoRoot, localRoot, [
         {
-          localPath: path.join(localRoot, 'opencode.db'),
+          localPath: path.join(localRoot, 'mimocode.db'),
           repoPath: repoDbPath,
           type: 'file',
           isSecret: true,
@@ -128,12 +128,12 @@ describe('syncLocalToRepo preserveWhenMissing', () => {
     });
   });
 
-  it('removes stale sqlite sidecars when local opencode.db has none', async () => {
+  it('removes stale sqlite sidecars when local mimocode.db has none', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
-      const localDbPath = path.join(localRoot, 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
+      const localDbPath = path.join(localRoot, 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.mkdir(path.dirname(localDbPath), { recursive: true });
       await fs.writeFile(repoDbPath, 'old-db-content', 'utf8');
@@ -213,12 +213,12 @@ describe('syncLocalToRepo preserveWhenMissing', () => {
 });
 
 describe('syncRepoToLocal for session database', () => {
-  it('copies opencode.db and sqlite sidecars from repo to local', async () => {
+  it('copies mimocode.db and sqlite sidecars from repo to local', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
-      const localDbPath = path.join(localRoot, 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
+      const localDbPath = path.join(localRoot, 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.writeFile(repoDbPath, 'repo-db-content', 'utf8');
       await fs.writeFile(`${repoDbPath}-wal`, 'repo-wal-content', 'utf8');
@@ -244,12 +244,12 @@ describe('syncRepoToLocal for session database', () => {
     });
   });
 
-  it('removes stale local sqlite sidecars when repo opencode.db has none', async () => {
+  it('removes stale local sqlite sidecars when repo mimocode.db has none', async () => {
     await withTempDir(async (root) => {
       const repoRoot = path.join(root, 'repo');
       const localRoot = path.join(root, 'local');
-      const repoDbPath = path.join(repoRoot, 'data', 'opencode.db');
-      const localDbPath = path.join(localRoot, 'opencode.db');
+      const repoDbPath = path.join(repoRoot, 'data', 'mimocode.db');
+      const localDbPath = path.join(localRoot, 'mimocode.db');
       await fs.mkdir(path.dirname(repoDbPath), { recursive: true });
       await fs.mkdir(path.dirname(localDbPath), { recursive: true });
       await fs.writeFile(repoDbPath, 'repo-db-content', 'utf8');

@@ -27,16 +27,16 @@ describe('resolveXdgPaths', () => {
 });
 
 describe('resolveSyncLocations', () => {
-  it('respects opencode_config_dir', () => {
+  it('respects mimocode_config_dir', () => {
     const env = {
       HOME: '/home/test',
-      opencode_config_dir: '/custom/opencode',
+      mimocode_config_dir: '/custom/mimocode',
     } as NodeJS.ProcessEnv;
     const locations = resolveSyncLocations(env, 'linux');
 
-    expect(locations.configRoot).toBe('/custom/opencode');
-    expect(locations.syncConfigPath).toBe('/custom/opencode/opencode-synced.jsonc');
-    expect(locations.overridesPath).toBe('/custom/opencode/opencode-synced.overrides.jsonc');
+    expect(locations.configRoot).toBe('/custom/mimocode');
+    expect(locations.syncConfigPath).toBe('/custom/mimocode/mimocode-synced.jsonc');
+    expect(locations.overridesPath).toBe('/custom/mimocode/mimocode-synced.overrides.jsonc');
   });
 });
 
@@ -48,7 +48,7 @@ describe('buildSyncPlan', () => {
       repo: { owner: 'acme', name: 'config' },
       includeSecrets: false,
       extraSecretPaths: ['/home/test/.ssh/id_rsa'],
-      extraConfigPaths: ['/home/test/.config/opencode/custom.json'],
+      extraConfigPaths: ['/home/test/.config/mimocode/custom.json'],
     };
 
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
@@ -59,7 +59,7 @@ describe('buildSyncPlan', () => {
     expect(plan.extraConfigs.allowlist.length).toBe(1);
   });
 
-  it('includes opencode-synced config file in items', () => {
+  it('includes mimocode-synced config file in items', () => {
     const env = { HOME: '/home/test' } as NodeJS.ProcessEnv;
     const locations = resolveSyncLocations(env, 'linux');
     const config: SyncConfig = {
@@ -96,7 +96,7 @@ describe('buildSyncPlan', () => {
       includeSecrets: false,
       extraConfigPaths: [
         `${locations.configRoot}/agent`,
-        `${locations.configRoot}/opencode.json`,
+        `${locations.configRoot}/mimocode.json`,
         customConfigPath,
       ],
     };
@@ -116,20 +116,20 @@ describe('buildSyncPlan', () => {
 
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
     const skillsItem = plan.items.find((item) =>
-      item.localPath.endsWith('/.config/opencode/skills')
+      item.localPath.endsWith('/.config/mimocode/skills')
     );
 
     expect(skillsItem).toBeTruthy();
     expect(skillsItem?.type).toBe('dir');
 
     const disabledPlan = buildSyncPlan(
-      normalizeSyncConfig({ ...config, includeOpencodeSkills: false }),
+      normalizeSyncConfig({ ...config, includeMimocodeSkills: false }),
       locations,
       '/repo',
       'linux'
     );
     const disabledSkillsItem = disabledPlan.items.find((item) =>
-      item.localPath.endsWith('/.config/opencode/skills')
+      item.localPath.endsWith('/.config/mimocode/skills')
     );
     expect(disabledSkillsItem).toBeUndefined();
   });
@@ -224,7 +224,7 @@ describe('buildSyncPlan', () => {
       repo: { owner: 'acme', name: 'config' },
       includeSecrets: true,
       extraSecretPaths: ['/home/test/.ssh/id_rsa'],
-      extraConfigPaths: ['/home/test/.config/opencode/custom.json'],
+      extraConfigPaths: ['/home/test/.config/mimocode/custom.json'],
     };
 
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
@@ -246,11 +246,11 @@ describe('buildSyncPlan', () => {
 
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
     const expectedSessionPaths = [
-      '/.local/share/opencode/opencode.db',
-      '/.local/share/opencode/storage/session',
-      '/.local/share/opencode/storage/message',
-      '/.local/share/opencode/storage/part',
-      '/.local/share/opencode/storage/session_diff',
+      '/.local/share/mimocode/mimocode.db',
+      '/.local/share/mimocode/storage/session',
+      '/.local/share/mimocode/storage/message',
+      '/.local/share/mimocode/storage/part',
+      '/.local/share/mimocode/storage/session_diff',
     ];
 
     for (const suffix of expectedSessionPaths) {
@@ -276,11 +276,11 @@ describe('buildSyncPlan', () => {
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
     const sessionItems = plan.items.filter(
       (item) =>
-        item.localPath.endsWith('/.local/share/opencode/opencode.db') ||
-        item.localPath.includes('/.local/share/opencode/storage/session') ||
-        item.localPath.includes('/.local/share/opencode/storage/message') ||
-        item.localPath.includes('/.local/share/opencode/storage/part') ||
-        item.localPath.includes('/.local/share/opencode/storage/session_diff')
+        item.localPath.endsWith('/.local/share/mimocode/mimocode.db') ||
+        item.localPath.includes('/.local/share/mimocode/storage/session') ||
+        item.localPath.includes('/.local/share/mimocode/storage/message') ||
+        item.localPath.includes('/.local/share/mimocode/storage/part') ||
+        item.localPath.includes('/.local/share/mimocode/storage/session_diff')
     );
 
     expect(sessionItems).toEqual([]);
@@ -296,8 +296,8 @@ describe('buildSyncPlan', () => {
         type: '1password',
         vault: 'Personal',
         documents: {
-          authJson: 'opencode-auth.json',
-          mcpAuthJson: 'opencode-mcp-auth.json',
+          authJson: 'mimocode-auth.json',
+          mcpAuthJson: 'mimocode-mcp-auth.json',
         },
       },
     };
@@ -305,10 +305,10 @@ describe('buildSyncPlan', () => {
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
 
     const authItem = plan.items.find((item) =>
-      item.localPath.endsWith('/.local/share/opencode/auth.json')
+      item.localPath.endsWith('/.local/share/mimocode/auth.json')
     );
     const mcpItem = plan.items.find((item) =>
-      item.localPath.endsWith('/.local/share/opencode/mcp-auth.json')
+      item.localPath.endsWith('/.local/share/mimocode/mcp-auth.json')
     );
 
     expect(authItem).toBeUndefined();
@@ -325,7 +325,7 @@ describe('buildSyncPlan', () => {
 
     const plan = buildSyncPlan(normalizeSyncConfig(config), locations, '/repo', 'linux');
     const favoritesItem = plan.items.find((item) =>
-      item.localPath.endsWith('/.local/state/opencode/model.json')
+      item.localPath.endsWith('/.local/state/mimocode/model.json')
     );
 
     expect(favoritesItem).toBeTruthy();
@@ -337,7 +337,7 @@ describe('buildSyncPlan', () => {
       'linux'
     );
     const disabledItem = disabledPlan.items.find((item) =>
-      item.localPath.endsWith('/.local/state/opencode/model.json')
+      item.localPath.endsWith('/.local/state/mimocode/model.json')
     );
 
     expect(disabledItem).toBeUndefined();

@@ -35,7 +35,7 @@ describe('deepMerge', () => {
 describe('stripOverrides', () => {
   it('removes override keys and restores base values', () => {
     const base = {
-      theme: 'opencode',
+      theme: 'mimocode',
       provider: { openai: { apiKey: 'base', models: { tiny: true } } },
     };
     const overrides = {
@@ -49,13 +49,13 @@ describe('stripOverrides', () => {
   });
 
   it('drops override-only keys not present in base', () => {
-    const base = { theme: 'opencode' };
+    const base = { theme: 'mimocode' };
     const overrides = { theme: 'local', editor: 'vim' };
     const local = { theme: 'local', editor: 'vim', other: true };
 
     const stripped = stripOverrides(local, overrides, base);
 
-    expect(stripped).toEqual({ theme: 'opencode', other: true });
+    expect(stripped).toEqual({ theme: 'mimocode', other: true });
   });
 });
 
@@ -83,16 +83,16 @@ describe('normalizeSyncConfig', () => {
 
   it('enables skills and home .agents by default', () => {
     const normalized = normalizeSyncConfig({});
-    expect(normalized.includeOpencodeSkills).toBe(true);
+    expect(normalized.includeMimocodeSkills).toBe(true);
     expect(normalized.includeAgentsDir).toBe(true);
   });
 
   it('allows disabling skills and home .agents', () => {
     const normalized = normalizeSyncConfig({
-      includeOpencodeSkills: false,
+      includeMimocodeSkills: false,
       includeAgentsDir: false,
     });
-    expect(normalized.includeOpencodeSkills).toBe(false);
+    expect(normalized.includeMimocodeSkills).toBe(false);
     expect(normalized.includeAgentsDir).toBe(false);
   });
 
@@ -215,7 +215,7 @@ describe('parseJsonc', () => {
       // comment
       "repo": {
         "owner": "me",
-        "name": "opencode-config",
+        "name": "mimocode-config",
       },
       "includeSecrets": false,
       "extraSecretPaths": [
@@ -227,7 +227,7 @@ describe('parseJsonc', () => {
     }`;
 
     expect(parseJsonc(input)).toEqual({
-      repo: { owner: 'me', name: 'opencode-config' },
+      repo: { owner: 'me', name: 'mimocode-config' },
       includeSecrets: false,
       extraSecretPaths: ['foo'],
       extraConfigPaths: ['bar'],
@@ -237,7 +237,7 @@ describe('parseJsonc', () => {
 
 describe('chmodIfExists', () => {
   it('ignores missing paths', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-sync-'));
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'mimocode-sync-'));
     try {
       const missingPath = path.join(tempDir, 'missing.txt');
       await expect(chmodIfExists(missingPath, 0o600)).resolves.toBeUndefined();

@@ -15,54 +15,54 @@ describe('parseRepoVisibility', () => {
 
 describe('parseRepoReference', () => {
   it('parses short repo name with authenticated-user fallback', () => {
-    expect(parseRepoReference('my-opencode-config', 'ihildy')).toEqual({
+    expect(parseRepoReference('my-mimocode-config', 'ihildy')).toEqual({
       owner: 'ihildy',
-      name: 'my-opencode-config',
+      name: 'my-mimocode-config',
     });
   });
 
   it('parses explicit owner/repo input', () => {
-    expect(parseRepoReference('acme/opencode-sync', 'ignored')).toEqual({
+    expect(parseRepoReference('acme/mimocode-sync', 'ignored')).toEqual({
       owner: 'acme',
-      name: 'opencode-sync',
+      name: 'mimocode-sync',
     });
   });
 
   it('parses GitHub https repo URLs', () => {
-    expect(parseRepoReference('https://github.com/acme/opencode-sync.git', 'ignored')).toEqual({
+    expect(parseRepoReference('https://github.com/acme/mimocode-sync.git', 'ignored')).toEqual({
       owner: 'acme',
-      name: 'opencode-sync',
+      name: 'mimocode-sync',
     });
   });
 
   it('parses GitHub ssh:// repo URLs', () => {
-    expect(parseRepoReference('ssh://git@github.com/acme/opencode-sync.git', 'ignored')).toEqual({
+    expect(parseRepoReference('ssh://git@github.com/acme/mimocode-sync.git', 'ignored')).toEqual({
       owner: 'acme',
-      name: 'opencode-sync',
+      name: 'mimocode-sync',
     });
   });
 
   it('parses GitHub SSH repo URLs', () => {
-    expect(parseRepoReference('git@github.com:acme/opencode-sync.git', 'ignored')).toEqual({
+    expect(parseRepoReference('git@github.com:acme/mimocode-sync.git', 'ignored')).toEqual({
       owner: 'acme',
-      name: 'opencode-sync',
+      name: 'mimocode-sync',
     });
   });
 
   it('parses GitHub SSH repo URLs with trailing slash', () => {
-    expect(parseRepoReference('git@github.com:acme/opencode-sync.git/', 'ignored')).toEqual({
+    expect(parseRepoReference('git@github.com:acme/mimocode-sync.git/', 'ignored')).toEqual({
       owner: 'acme',
-      name: 'opencode-sync',
+      name: 'mimocode-sync',
     });
   });
 
   it('returns null for invalid repo references', () => {
-    expect(parseRepoReference('https://example.com/acme/opencode-sync', 'ignored')).toBeNull();
+    expect(parseRepoReference('https://example.com/acme/mimocode-sync', 'ignored')).toBeNull();
     expect(
-      parseRepoReference('https://github.com/acme/opencode-sync/issues', 'ignored')
+      parseRepoReference('https://github.com/acme/mimocode-sync/issues', 'ignored')
     ).toBeNull();
-    expect(parseRepoReference('acme/opencode/sync', 'ignored')).toBeNull();
-    expect(parseRepoReference('git@notgithub:acme/opencode-sync', 'ignored')).toBeNull();
+    expect(parseRepoReference('acme/mimocode/sync', 'ignored')).toBeNull();
+    expect(parseRepoReference('git@notgithub:acme/mimocode-sync', 'ignored')).toBeNull();
     expect(parseRepoReference('   ', 'ihildy')).toBeNull();
   });
 });

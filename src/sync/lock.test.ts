@@ -8,7 +8,7 @@ import { tryAcquireSyncLock } from './lock.js';
 
 describe('tryAcquireSyncLock', () => {
   it('acquires and releases a lock', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-sync-lock-'));
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'mimocode-sync-lock-'));
     try {
       const lockPath = path.join(tempDir, 'sync.lock');
       const result = await tryAcquireSyncLock(lockPath);
@@ -28,7 +28,7 @@ describe('tryAcquireSyncLock', () => {
   });
 
   it('returns busy when lock is held by alive pid', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-sync-lock-'));
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'mimocode-sync-lock-'));
     try {
       const lockPath = path.join(tempDir, 'sync.lock');
       await writeFile(
@@ -52,7 +52,7 @@ describe('tryAcquireSyncLock', () => {
   });
 
   it('breaks stale lock when pid is dead', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-sync-lock-'));
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'mimocode-sync-lock-'));
     try {
       const lockPath = path.join(tempDir, 'sync.lock');
       const deadPid = process.pid + 1_000_000;
