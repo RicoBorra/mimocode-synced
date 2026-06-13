@@ -259,6 +259,11 @@ export async function getAuthenticatedUser($: Shell): Promise<string> {
 }
 
 const LIKELY_SYNC_REPO_NAMES = [
+  'my-mimocode-config',
+  'mimocode-config',
+  'mimocode-sync',
+  'mimocode-synced',
+  'dotfiles-mimocode',
   'my-opencode-config',
   'opencode-config',
   'opencode-sync',

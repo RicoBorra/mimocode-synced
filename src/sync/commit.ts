@@ -14,7 +14,7 @@ export async function generateCommitMessage(
   repoDir: string,
   fallbackDate = new Date()
 ): Promise<string> {
-  const fallback = `Sync opencode config (${formatDate(fallbackDate)})`;
+  const fallback = `Sync mimocode config (${formatDate(fallbackDate)})`;
 
   const diffSummary = await getDiffSummary(ctx.$, repoDir);
   if (!diffSummary) return fallback;
@@ -24,7 +24,7 @@ export async function generateCommitMessage(
 
   const prompt = [
     'Generate a concise single-line git commit message (max 72 chars).',
-    'Focus on opencode config sync changes.',
+    'Focus on mimocode config sync changes.',
     'Return only the message, no quotes.',
     '',
     'Diff summary:',
@@ -34,7 +34,7 @@ export async function generateCommitMessage(
   let sessionId: string | null = null;
 
   try {
-    const sessionResult = await ctx.client.session.create({ body: { title: 'opencode-synced' } });
+    const sessionResult = await ctx.client.session.create({ body: { title: 'mimocode-synced' } });
     const session = unwrapData<{ id: string }>(sessionResult);
     sessionId = session?.id ?? null;
     if (!sessionId) return fallback;

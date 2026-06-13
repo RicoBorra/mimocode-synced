@@ -2,7 +2,7 @@ import type { PluginInput } from '@opencode-ai/plugin';
 
 type Client = PluginInput['client'];
 
-const SERVICE_NAME = 'opencode-synced';
+const SERVICE_NAME = 'mimocode-synced';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -45,7 +45,7 @@ export async function showToast(
 ): Promise<void> {
   try {
     await client.tui.showToast({
-      body: { title: 'opencode-synced plugin', message, variant },
+      body: { title: 'mimocode-synced plugin', message, variant },
     });
   } catch {
     // Ignore toast failures (e.g. headless mode or early startup).

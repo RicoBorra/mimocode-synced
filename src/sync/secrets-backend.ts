@@ -385,7 +385,7 @@ async function lookupDocumentWithRetry(
 async function createTempPath(targetPath: string): Promise<{ tempDir: string; tempPath: string }> {
   const targetDir = path.dirname(targetPath);
   await fs.mkdir(targetDir, { recursive: true });
-  const tempDir = await fs.mkdtemp(path.join(targetDir, '.opencode-synced-'));
+  const tempDir = await fs.mkdtemp(path.join(targetDir, '.mimocode-synced-'));
   const tempPath = path.join(tempDir, path.basename(targetPath));
   return { tempDir, tempPath };
 }

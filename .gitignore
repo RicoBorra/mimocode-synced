@@ -13,3 +13,5 @@ coverage/
 __pycache__/
 opencode-plugin-template/
 opencode-docs-*/
+mimocode-plugin-template/
+mimocode-docs-*/

@@ -117,9 +117,9 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
   const locations = resolveSyncLocations();
   const log = createLogger(ctx.client);
   const lockPath = path.join(path.dirname(locations.statePath), 'sync.lock');
-  const strictLinkRepo = resolveStrictLinkRepo(process.env.OPENCODE_SYNC_E2E_STRICT_LINK_REPO);
+  const strictLinkRepo = resolveStrictLinkRepo(process.env.MIMOCODE_SYNC_E2E_STRICT_LINK_REPO);
   const disableAutoRepoDiscovery =
-    process.env.OPENCODE_SYNC_E2E_DISABLE_AUTO_REPO_DISCOVERY === '1' || strictLinkRepo !== null;
+    process.env.MIMOCODE_SYNC_E2E_DISABLE_AUTO_REPO_DISCOVERY === '1' || strictLinkRepo !== null;
   let tursoSyncTimer: ReturnType<typeof setInterval> | null = null;
   let tursoSyncIntervalSec = 15;
   const activeSessionIds = new Set<string>();
