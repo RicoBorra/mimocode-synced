@@ -4,6 +4,22 @@
 
 Sync global mimocode configuration across machines via a GitHub repo, with optional secrets support for private repos.
 
+## How this differs from opencode-synced
+
+This plugin is a fork of [opencode-synced](https://github.com/iHildy/opencode-synced), adapted for MiMo Code. The **sync logic is identical** — same init flow, same pull/push, same config structure. The difference is entirely in how the plugin is installed and loaded, caused by MiMo Code's plugin ecosystem being less mature than opencode's.
+
+| | opencode-synced (upstream) | mimocode-synced (this fork) |
+|---|---|---|
+| **Install** | `"plugin": ["opencode-synced"]` — host auto-installs from npm | Manual clone, build, copy to plugins dir |
+| **SDK package** | `@opencode-ai/plugin@1.9.0` — exists on npm, works | `@mimo-ai/plugin@0.1.0` — does not exist on npm yet |
+| **Runtime deps** | SDK provides zod + types at runtime | Must bundle zod + hand-write type stubs (`src/sync/plugin-types.ts`) |
+| **Build** | `tsc` only | `tsc` + esbuild single-file bundle |
+| **Host loader** | Accepts multiple exports (named + default) | Rejects non-function exports — only `server` + `default` allowed |
+
+**Root cause**: `@mimo-ai/plugin` has no stable release on npm. MiMo Code's auto-installer targets a version that doesn't exist, and its plugin loader has stricter export constraints. Once Xiaomi publishes a stable SDK and fixes the loader, this fork's setup could collapse to match upstream's single-line install.
+
+The `src/sync/plugin-types.ts` file exists only because of this SDK gap — it manually describes the interfaces that the upstream gets from `@opencode-ai/plugin`. It will be removed once a working SDK is available.
+
 ## Features
 
 - Syncs global mimocode config (`~/.config/mimocode`) and related directories
@@ -50,7 +66,7 @@ cp package.json ~/.config/mimocode/plugins/
 }
 ```
 
-4. Install the plugin SDK (workaround — mimocode tries to install `@mimo-ai/plugin@0.1.0` which doesn't exist yet on npm):
+4. Install the plugin SDK workaround (see [How this differs from opencode-synced](#how-this-differs-from-opencode-synced) for why this is needed):
 
 ```bash
 cd ~/.config/mimocode
@@ -58,7 +74,7 @@ npm init -y
 npm install @mimo-ai/plugin@0.1.1-preview.1
 ```
 
-> **Note**: Step 4 is temporary. Once Xiaomi publishes `@mimo-ai/plugin@0.1.0` to npm, mimocode's built-in installer will handle this automatically and you can delete `~/.config/mimocode/package.json` and `~/.config/mimocode/node_modules/`.
+> **Note**: This is temporary. Once Xiaomi publishes `@mimo-ai/plugin@0.1.0` to npm, mimocode's built-in installer will handle this automatically and you can delete `~/.config/mimocode/package.json` and `~/.config/mimocode/node_modules/`.
 
 5. Restart mimocode. Run `/sync-init` to set up your sync repo.
 
