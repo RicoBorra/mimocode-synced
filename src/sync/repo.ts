@@ -74,16 +74,21 @@ export async function ensureRepoCloned(
     if (expected) {
       const remoteUrl = await getOriginRemoteUrl($, repoDir);
       const actual = remoteUrl ? parseRemoteOwnerName(remoteUrl) : null;
-      if (
+      const remoteMismatch =
         !actual ||
         actual.owner.toLowerCase() !== expected.owner.toLowerCase() ||
-        actual.name.toLowerCase() !== expected.name.toLowerCase()
-      ) {
+        actual.name.toLowerCase() !== expected.name.toLowerCase();
+
+      if (remoteMismatch) {
+        await fs.rm(repoDir, { recursive: true, force: true });
+        await fs.mkdir(repoDir, { recursive: true });
+        const normalizedIdentifier = `${expected.owner}/${expected.name}`;
         try {
-          const normalizedIdentifier = `${expected.owner}/${expected.name}`;
-          await $`git -C ${repoDir} remote set-url origin git@github.com:${normalizedIdentifier}.git`.quiet();
-        } catch (error) {
-          throw new SyncCommandError(`Failed to update repo remote: ${formatError(error)}`);
+          await $`gh repo clone ${normalizedIdentifier} ${repoDir}`.quiet();
+        } catch {
+          await $`git -C ${repoDir} init`.quiet();
+          await $`git -C ${repoDir} remote add origin git@github.com:${normalizedIdentifier}.git`.quiet();
+          await $`git -C ${repoDir} checkout -b main`.quiet();
         }
       }
     }
