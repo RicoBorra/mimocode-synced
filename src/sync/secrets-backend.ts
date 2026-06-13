@@ -56,7 +56,7 @@ export function resolveAuthFilePaths(locations: SyncLocations): {
   authPath: string;
   mcpAuthPath: string;
 } {
-  const dataRoot = path.join(locations.xdg.dataDir, 'opencode');
+  const dataRoot = path.join(locations.xdg.dataDir, 'mimocode');
   return {
     authPath: path.join(dataRoot, 'auth.json'),
     mcpAuthPath: path.join(dataRoot, 'mcp-auth.json'),

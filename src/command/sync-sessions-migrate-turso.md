@@ -2,7 +2,7 @@
 description: Migrate session sync from git artifacts to Turso backend
 ---
 
-You MUST call the `opencode_sync` tool with `command="sessions-migrate-turso"`.
+You MUST call the `mimocode_sync` tool with `command="sessions-migrate-turso"`.
 
 Behavior:
 - Ensure Turso setup is complete.

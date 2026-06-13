@@ -74,7 +74,7 @@ interface InitOptions {
   includeModelFavorites?: boolean;
   setupTurso?: boolean;
   migrateSessions?: boolean;
-  includeOpencodeSkills?: boolean;
+  includeMimocodeSkills?: boolean;
   includeAgentsDir?: boolean;
   create?: boolean;
   private?: boolean;
@@ -247,7 +247,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
   };
 
   const secretsBackendNotConfiguredMessage =
-    'Secrets backend not configured. Add secretsBackend to opencode-synced.jsonc.';
+    'Secrets backend not configured. Add secretsBackend to mimocode-synced.jsonc.';
 
   const resolveSecretsBackendForCommand = async (): Promise<
     { backend: SecretsBackend } | { message: string }
@@ -598,11 +598,11 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         try {
           config = await loadSyncConfig(locations);
         } catch (error) {
-          const message = `Failed to load opencode-synced config: ${formatError(error)}`;
+          const message = `Failed to load mimocode-synced config: ${formatError(error)}`;
           log.error(message, { path: locations.syncConfigPath });
           await showToast(
             ctx.client,
-            `Failed to load opencode-synced config. Check ${locations.syncConfigPath} for JSON errors.`,
+            `Failed to load mimocode-synced config. Check ${locations.syncConfigPath} for JSON errors.`,
             'error'
           );
           return;
@@ -611,7 +611,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           stopTursoSyncLoop();
           await showToast(
             ctx.client,
-            'Configure opencode-synced with /sync-init or link to an existing repo with /sync-link',
+            'Configure mimocode-synced with /sync-init or link to an existing repo with /sync-link',
             'info'
           );
           return;
@@ -644,7 +644,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
     status: async () => {
       const config = await loadSyncConfig(locations);
       if (!config) {
-        return 'opencode-synced is not configured. Run /sync-init to set it up.';
+        return 'mimocode-synced is not configured. Run /sync-init to set it up.';
       }
 
       assertValidSecretsBackend(config);
@@ -679,7 +679,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           : 'git (best effort, may conflict with concurrent writers)';
       const includePromptStash = config.includePromptStash ? 'enabled' : 'disabled';
       const includeModelFavorites = config.includeModelFavorites ? 'enabled' : 'disabled';
-      const includeOpencodeSkills = config.includeOpencodeSkills ? 'enabled' : 'disabled';
+      const includeMimocodeSkills = config.includeMimocodeSkills ? 'enabled' : 'disabled';
       const includeAgentsDir = config.includeAgentsDir ? 'enabled' : 'disabled';
       const secretsBackend = config.secretsBackend?.type ?? 'none';
       const lastPull = state.lastPull ?? 'never';
@@ -718,7 +718,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         `Last session push: ${lastSessionPush}`,
         `Prompt stash: ${includePromptStash}`,
         `Model favorites: ${includeModelFavorites}`,
-        `Skills: ${includeOpencodeSkills}`,
+        `Skills: ${includeMimocodeSkills}`,
         `Home .agents: ${includeAgentsDir}`,
         `Last pull: ${lastPull}`,
         `Last push: ${lastPush}`,
@@ -779,14 +779,14 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           const dirty = await hasLocalChanges(ctx.$, repoRoot);
           if (dirty) {
             const branch = resolveRepoBranch(config);
-            await commitAll(ctx.$, repoRoot, 'Initial sync from opencode-synced');
+            await commitAll(ctx.$, repoRoot, 'Initial sync from mimocode-synced');
             await pushBranch(ctx.$, repoRoot, branch);
             await updateState(locations, { lastPush: new Date().toISOString() });
           }
         }
 
         const lines = [
-          'opencode-synced configured.',
+          'mimocode-synced configured.',
           `Repo: ${repoIdentifier}${created ? ' (created)' : ''}`,
           `Branch: ${resolveRepoBranch(config)}`,
           `Local repo: ${repoRoot}`,
@@ -820,7 +820,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
             ? `"${options.repo}"`
             : disableAutoRepoDiscovery
               ? '(none; auto-discovery disabled)'
-              : 'common sync repo names (my-opencode-config, opencode-config, etc.)';
+              : 'common sync repo names (my-mimocode-config, mimocode-config, etc.)';
 
           const lines = [
             `Could not find an existing sync repo. Searched for: ${searchedFor}`,
@@ -891,10 +891,10 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         const lines = [
           `Linked to existing sync repo: ${found.owner}/${found.name}`,
           '',
-          'Your local opencode config has been OVERWRITTEN with the synced config.',
+          'Your local mimocode config has been OVERWRITTEN with the synced config.',
           'Your local overrides file was preserved and applied on top.',
           '',
-          'Restart opencode to apply the new settings.',
+          'Restart mimocode to apply the new settings.',
           '',
           found.isPrivate
             ? 'To enable secrets sync, run: /sync-enable-secrets'
@@ -904,7 +904,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           lines.push('', ...linkNotes);
         }
 
-        await showToast(ctx.client, 'Config synced. Restart opencode to apply.', 'info');
+        await showToast(ctx.client, 'Config synced. Restart mimocode to apply.', 'info');
         return lines.join('\n');
       }),
     pull: () =>
@@ -947,14 +947,15 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         const tursoSummary = await runForegroundTursoCycle(config, 'pull-updated');
         ensureTursoSyncLoop(config);
 
-        await showToast(ctx.client, 'Config updated. Restart opencode to apply.', 'info');
+        await showToast(ctx.client, 'Config updated. Restart mimocode to apply.', 'info');
+
         if (tursoSummary) {
           return [
-            'Remote config applied. Restart opencode to use new settings.',
+            'Remote config applied. Restart mimocode to use new settings.',
             tursoSummary,
           ].join('\n');
         }
-        return 'Remote config applied. Restart opencode to use new settings.';
+        return 'Remote config applied. Restart mimocode to use new settings.';
       }),
     push: () =>
       runExclusive(async () => {
@@ -1248,9 +1249,9 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         }
 
         const deprecatedPaths = [
-          path.join(repoRoot, 'data', 'opencode.db'),
-          path.join(repoRoot, 'data', 'opencode.db-wal'),
-          path.join(repoRoot, 'data', 'opencode.db-shm'),
+          path.join(repoRoot, 'data', 'mimocode.db'),
+          path.join(repoRoot, 'data', 'mimocode.db-wal'),
+          path.join(repoRoot, 'data', 'mimocode.db-shm'),
           path.join(repoRoot, 'data', 'storage', 'session'),
           path.join(repoRoot, 'data', 'storage', 'message'),
           path.join(repoRoot, 'data', 'storage', 'part'),
@@ -1377,7 +1378,7 @@ async function runStartup(
       lastPull: new Date().toISOString(),
       lastRemoteUpdate: new Date().toISOString(),
     });
-    await showToast(ctx.client, 'Config updated. Restart opencode to apply.', 'info');
+    await showToast(ctx.client, 'Config updated. Restart mimocode to apply.', 'info');
     return;
   }
 
@@ -1408,7 +1409,7 @@ async function getConfigOrThrow(
   const config = await loadSyncConfig(locations);
   if (!config) {
     throw new SyncConfigMissingError(
-      'Missing opencode-synced config. Run /sync-init to set it up.'
+      'Missing mimocode-synced config. Run /sync-init to set it up.'
     );
   }
   assertValidSecretsBackend(config);
@@ -1436,7 +1437,7 @@ async function resolveBranch(
   }
 }
 
-const DEFAULT_REPO_NAME = 'my-opencode-config';
+const DEFAULT_REPO_NAME = 'my-mimocode-config';
 
 async function buildConfigFromInit($: Shell, options: InitOptions) {
   const repo = await resolveRepoFromInit($, options);
@@ -1452,7 +1453,7 @@ async function buildConfigFromInit($: Shell, options: InitOptions) {
       : undefined,
     includePromptStash: options.includePromptStash ?? false,
     includeModelFavorites: options.includeModelFavorites ?? true,
-    includeOpencodeSkills: options.includeOpencodeSkills ?? true,
+    includeMimocodeSkills: options.includeMimocodeSkills ?? true,
     includeAgentsDir: options.includeAgentsDir ?? true,
     extraSecretPaths: options.extraSecretPaths ?? [],
     extraConfigPaths: options.extraConfigPaths ?? [],
@@ -1546,7 +1547,7 @@ async function analyzeAndDecideResolution(
     const statusOutput = changes.join('\n');
 
     const prompt = [
-      'You are analyzing uncommitted changes in an opencode-synced repository.',
+      'You are analyzing uncommitted changes in a mimocode-synced repository.',
       'Decide whether to commit these changes or discard them.',
       '',
       'IMPORTANT: Only choose "commit" if the changes appear to be legitimate config updates.',
@@ -1640,10 +1641,10 @@ function resolveStrictLinkRepo(raw: string | undefined): { owner: string; name: 
   const value = raw.trim();
   if (!value) return null;
 
-  const parsed = parseRepoReference(value, '__opencode_sync_no_owner__');
-  if (!parsed || parsed.owner === '__opencode_sync_no_owner__') {
+  const parsed = parseRepoReference(value, '__mimocode_sync_no_owner__');
+  if (!parsed || parsed.owner === '__mimocode_sync_no_owner__') {
     throw new SyncCommandError(
-      'OPENCODE_SYNC_E2E_STRICT_LINK_REPO must be an explicit owner/repo or GitHub repo URL.'
+      'MIMOCODE_SYNC_E2E_STRICT_LINK_REPO must be an explicit owner/repo or GitHub repo URL.'
     );
   }
 

@@ -45,16 +45,18 @@ export interface SyncPlan {
   platform: NodeJS.Platform;
 }
 
-const DEFAULT_CONFIG_NAME = 'opencode.json';
-const DEFAULT_CONFIGC_NAME = 'opencode.jsonc';
+const APP_NAME = 'mimocode';
+
+const DEFAULT_CONFIG_NAME = `${APP_NAME}.json`;
+const DEFAULT_CONFIGC_NAME = `${APP_NAME}.jsonc`;
 const DEFAULT_AGENTS_NAME = 'AGENTS.md';
-const DEFAULT_SYNC_CONFIG_NAME = 'opencode-synced.jsonc';
-const DEFAULT_OVERRIDES_NAME = 'opencode-synced.overrides.jsonc';
+const DEFAULT_SYNC_CONFIG_NAME = `${APP_NAME}-synced.jsonc`;
+const DEFAULT_OVERRIDES_NAME = `${APP_NAME}-synced.overrides.jsonc`;
 const DEFAULT_STATE_NAME = 'sync-state.json';
 
 const CONFIG_DIRS = ['agent', 'command', 'mode', 'tool', 'themes', 'plugin'];
 const SESSION_DIRS = ['storage/session', 'storage/message', 'storage/part', 'storage/session_diff'];
-const SESSION_DB_FILE = 'opencode.db';
+const SESSION_DB_FILE = `${APP_NAME}.db`;
 const PROMPT_STASH_FILES = ['prompt-stash.jsonl', 'prompt-history.jsonl'];
 const MODEL_FAVORITES_FILE = 'model.json';
 const SKILLS_DIR = 'skills';
@@ -106,11 +108,11 @@ export function resolveSyncLocations(
   platform: NodeJS.Platform = process.platform
 ): SyncLocations {
   const xdg = resolveXdgPaths(env, platform);
-  const customConfigDir = env.opencode_config_dir;
+  const customConfigDir = env.mimocode_config_dir;
   const configRoot = customConfigDir
     ? path.resolve(expandHome(customConfigDir, xdg.homeDir))
-    : path.join(xdg.configDir, 'opencode');
-  const dataRoot = path.join(xdg.dataDir, 'opencode');
+    : path.join(xdg.configDir, APP_NAME);
+  const dataRoot = path.join(xdg.dataDir, APP_NAME);
 
   return {
     xdg,
@@ -118,7 +120,7 @@ export function resolveSyncLocations(
     syncConfigPath: path.join(configRoot, DEFAULT_SYNC_CONFIG_NAME),
     overridesPath: path.join(configRoot, DEFAULT_OVERRIDES_NAME),
     statePath: path.join(dataRoot, DEFAULT_STATE_NAME),
-    defaultRepoDir: path.join(dataRoot, 'opencode-synced', 'repo'),
+    defaultRepoDir: path.join(dataRoot, `${APP_NAME}-synced`, 'repo'),
   };
 }
 
@@ -177,8 +179,8 @@ export function buildSyncPlan(
   platform: NodeJS.Platform = process.platform
 ): SyncPlan {
   const configRoot = locations.configRoot;
-  const dataRoot = path.join(locations.xdg.dataDir, 'opencode');
-  const stateRoot = path.join(locations.xdg.stateDir, 'opencode');
+  const dataRoot = path.join(locations.xdg.dataDir, APP_NAME);
+  const stateRoot = path.join(locations.xdg.stateDir, APP_NAME);
   const repoConfigRoot = path.join(repoRoot, 'config');
   const repoDataRoot = path.join(repoRoot, 'data');
   const repoSecretsRoot = path.join(repoRoot, 'secrets');
@@ -218,7 +220,7 @@ export function buildSyncPlan(
     });
   }
 
-  if (config.includeOpencodeSkills !== false) {
+  if (config.includeMimocodeSkills !== false) {
     items.push({
       localPath: path.join(configRoot, SKILLS_DIR),
       repoPath: path.join(repoConfigRoot, SKILLS_DIR),

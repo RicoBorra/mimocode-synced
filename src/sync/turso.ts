@@ -8,7 +8,7 @@ import { isPlainObject, isTursoSessionBackend, pathExists, writeJsonFile } from 
 import { SyncCommandError } from './errors.js';
 import type { SyncLocations } from './paths.js';
 
-const SESSION_SYNC_TABLE = 'opencode_session_sync_snapshot';
+const SESSION_SYNC_TABLE = 'mimocode_session_sync_snapshot';
 const CREDENTIAL_VERSION = 1;
 const TURSO_INSTALL_SCRIPT = 'curl -sSfL https://get.tur.so/install.sh | bash';
 const TURSO_SQL_TIMEOUT_MS = 30_000;
@@ -560,7 +560,7 @@ export function createTursoSessionBackend(options: {
 }
 
 export function resolveTursoCredentialPath(locations: SyncLocations): string {
-  return path.join(locations.xdg.dataDir, 'opencode', 'opencode-synced', 'turso-session.json');
+  return path.join(locations.xdg.dataDir, 'mimocode', 'mimocode-synced', 'turso-session.json');
 }
 
 export function resolveSessionDbPaths(locations: SyncLocations): {
@@ -568,8 +568,8 @@ export function resolveSessionDbPaths(locations: SyncLocations): {
   walPath: string;
   shmPath: string;
 } {
-  const dataRoot = path.join(locations.xdg.dataDir, 'opencode');
-  const dbPath = path.join(dataRoot, 'opencode.db');
+  const dataRoot = path.join(locations.xdg.dataDir, 'mimocode');
+  const dbPath = path.join(dataRoot, 'mimocode.db');
   return {
     dbPath,
     walPath: `${dbPath}-wal`,
@@ -583,7 +583,7 @@ export function resolveTursoDatabaseName(config: NormalizedSyncConfig): string {
     return sanitizeDatabaseName(explicit);
   }
 
-  const repoName = config.repo?.name?.trim() || 'opencode-config';
+  const repoName = config.repo?.name?.trim() || 'mimocode-config';
   return sanitizeDatabaseName(`${repoName}-sessions`);
 }
 
@@ -647,7 +647,7 @@ function sanitizeDatabaseName(input: string): string {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
-  const fallback = cleaned || 'opencode-sessions';
+  const fallback = cleaned || 'mimocode-sessions';
   return fallback.slice(0, 58);
 }
 

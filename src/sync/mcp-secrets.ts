@@ -59,7 +59,7 @@ function buildHeaderEnvVar(serverName: string, headerName: string): string {
 function buildEnvVar(serverName: string, key: string): string {
   const serverToken = toEnvToken(serverName, 'SERVER');
   const keyToken = toEnvToken(key, 'VALUE');
-  return `opencode_mcp_${serverToken}_${keyToken}`;
+  return `mimocode_mcp_${serverToken}_${keyToken}`;
 }
 
 function toEnvToken(input: string, fallback: string): string {

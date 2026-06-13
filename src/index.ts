@@ -109,12 +109,12 @@ async function loadCommands(): Promise<ParsedCommand[]> {
   return commands;
 }
 
-export const opencodeConfigSync: Plugin = async (ctx) => {
+export const mimocodeConfigSync: Plugin = async (ctx) => {
   const commands = await loadCommands();
   const service = createSyncService(ctx);
 
   const syncTool = tool({
-    description: 'Manage opencode config sync with a GitHub repo',
+    description: 'Manage mimocode config sync with a GitHub repo',
     args: {
       command: tool.schema
         .enum([
@@ -160,10 +160,10 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
         .boolean()
         .optional()
         .describe('Sync model favorites (state/model.json)'),
-      includeOpencodeSkills: tool.schema
+      includeMimocodeSkills: tool.schema
         .boolean()
         .optional()
-        .describe('Sync ~/.config/opencode/skills directory'),
+        .describe('Sync ~/.config/mimocode/skills directory'),
       includeAgentsDir: tool.schema.boolean().optional().describe('Sync ~/.agents directory'),
       create: tool.schema.boolean().optional().describe('Create repo if missing'),
       private: tool.schema.boolean().optional().describe('Create repo as private'),
@@ -199,7 +199,7 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
             includeModelFavorites: args.includeModelFavorites,
             setupTurso: args.setupTurso,
             migrateSessions: args.migrateSessions,
-            includeOpencodeSkills: args.includeOpencodeSkills,
+            includeMimocodeSkills: args.includeMimocodeSkills,
             includeAgentsDir: args.includeAgentsDir,
             create: args.create,
             private: args.private,
@@ -275,7 +275,7 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
 
   return {
     tool: {
-      opencode_sync: syncTool,
+      mimocode_sync: syncTool,
     },
     async event(input) {
       await service.handleEvent(input.event);
@@ -305,8 +305,10 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
   };
 };
 
-export const opencodeSynced = opencodeConfigSync;
-export default opencodeConfigSync;
+export const mimocodeSynced = mimocodeConfigSync;
+export const opencodeConfigSync = mimocodeConfigSync;
+export const opencodeSynced = mimocodeConfigSync;
+export default mimocodeConfigSync;
 
 function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;

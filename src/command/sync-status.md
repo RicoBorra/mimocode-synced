@@ -1,5 +1,5 @@
 ---
-description: Show opencode-synced status
+description: Show mimocode-synced status
 ---
 
-Use the opencode_sync tool with command "status" and report the results.
+Use the mimocode_sync tool with command "status" and report the results.

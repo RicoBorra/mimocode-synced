@@ -2,7 +2,7 @@
 description: Link this computer to an existing sync repo
 ---
 
-You MUST call the `opencode_sync` tool with `command="link"`.
+You MUST call the `mimocode_sync` tool with `command="link"`.
 Do not answer with plain text only.
 
 Argument handling:
@@ -11,4 +11,4 @@ Argument handling:
 
 Reminder:
 - Linking overwrites local config except local overrides.
-- After linking, remind to restart opencode.
+- After linking, remind to restart mimocode.

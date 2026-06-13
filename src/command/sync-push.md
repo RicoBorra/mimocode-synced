@@ -1,5 +1,5 @@
 ---
-description: Push local opencode config to the sync repo
+description: Push local mimocode config to the sync repo
 ---
 
-Use the opencode_sync tool with command "push".
+Use the mimocode_sync tool with command "push".

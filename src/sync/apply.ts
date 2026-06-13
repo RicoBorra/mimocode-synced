@@ -21,7 +21,7 @@ import { normalizePath } from './paths.js';
 
 type ExtraPathType = 'file' | 'dir';
 
-const SESSION_DB_NAME = 'opencode.db';
+const SESSION_DB_NAME = 'mimocode.db';
 const SESSION_DB_SIDECAR_SUFFIXES = ['-wal', '-shm'] as const;
 
 interface ExtraPathManifestItem {
