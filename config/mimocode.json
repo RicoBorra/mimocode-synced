@@ -1,0 +1,6 @@
+{
+  "$schema": "https://mimo.xiaomi.com//config.json",
+  "plugin": [
+    "./plugins/dist/index.js"
+  ]
+}

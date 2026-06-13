@@ -1,0 +1,18 @@
+{
+  "recent": [
+    {
+      "providerID": "openrouter",
+      "modelID": "xiaomi/mimo-v2.5-pro"
+    },
+    {
+      "providerID": "openrouter",
+      "modelID": "xiaomi/mimo-v2.5"
+    }
+  ],
+  "favorite": [],
+  "variant": {
+    "mimo/mimo-auto": "default",
+    "openrouter/xiaomi/mimo-v2.5": "default",
+    "openrouter/xiaomi/mimo-v2.5-pro": "default"
+  }
+}
