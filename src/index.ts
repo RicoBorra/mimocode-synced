@@ -118,7 +118,7 @@ async function loadCommands(): Promise<ParsedCommand[]> {
   return commands;
 }
 
-export const mimocodeConfigSync: Plugin = async (ctx) => {
+const mimocodeConfigSync: Plugin = async (ctx) => {
   const commands = await loadCommands();
   const service = createSyncService(ctx);
 
@@ -315,11 +315,7 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
   };
 };
 
-export const id = 'mimocode-synced';
 export const server: Plugin = mimocodeConfigSync;
-export const mimocodeSynced = mimocodeConfigSync;
-export const opencodeConfigSync = mimocodeConfigSync;
-export const opencodeSynced = mimocodeConfigSync;
 export default mimocodeConfigSync;
 
 function formatError(error: unknown): string {

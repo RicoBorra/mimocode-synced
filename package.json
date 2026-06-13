@@ -37,7 +37,7 @@
     "vitest": "^3.2.4"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp -r src/command dist/command",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && npx esbuild dist/index.js --bundle --platform=node --format=esm --allow-overwrite --outfile=dist/index.js \"--external:node:*\" && rm -rf dist/sync && cp -r src/command dist/command",
     "prepack": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
