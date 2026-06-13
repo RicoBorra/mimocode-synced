@@ -1,14 +1,13 @@
 import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-
-import type { PluginInput } from '@mimo-ai/plugin';
 import type { NormalizedSyncConfig, SecretsBackendConfig } from './config.js';
 import { chmodIfExists, pathExists } from './config.js';
 import { SyncCommandError } from './errors.js';
 import type { SyncLocations } from './paths.js';
+import type { PluginShell } from './plugin-types.js';
 
-type Shell = PluginInput['$'];
+type Shell = PluginShell;
 
 export interface OnePasswordConfig {
   type: '1password';

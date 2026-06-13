@@ -1,14 +1,22 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Plugin } from '@mimo-ai/plugin';
-import { tool } from '@mimo-ai/plugin/tool';
 import { z } from 'zod';
-
 import { applyOverridesToRuntimeConfig, loadOverrides } from './sync/config.js';
 import { SyncCommandError, SyncConfigMissingError } from './sync/errors.js';
 import { resolveSyncLocations } from './sync/paths.js';
+import type { Plugin } from './sync/plugin-types.js';
 import { createSyncService } from './sync/service.js';
+
+function tool<T extends z.ZodRawShape>(input: {
+  description: string;
+  args: T;
+  execute(args: z.infer<z.ZodObject<T>>, context: unknown): Promise<string>;
+}) {
+  return input;
+}
+
+tool.schema = z;
 
 interface CommandFrontmatter {
   description?: string;
@@ -282,10 +290,11 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
       await service.handleEvent(input.event);
     },
     async config(config) {
-      config.command = config.command ?? {};
+      const cfg = config as Record<string, unknown>;
+      cfg.command = (cfg.command as Record<string, unknown>) ?? {};
 
       for (const cmd of commands) {
-        config.command[cmd.name] = {
+        (cfg.command as Record<string, unknown>)[cmd.name] = {
           template: cmd.template,
           description: cmd.frontmatter.description,
           agent: cmd.frontmatter.agent,
@@ -297,7 +306,7 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
       try {
         const overrides = await loadOverrides(resolveSyncLocations());
         if (overrides) {
-          applyOverridesToRuntimeConfig(config as Record<string, unknown>, overrides);
+          applyOverridesToRuntimeConfig(cfg, overrides);
         }
       } catch {
         return;
@@ -306,6 +315,8 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
   };
 };
 
+export const id = 'mimocode-synced';
+export const server: Plugin = mimocodeConfigSync;
 export const mimocodeSynced = mimocodeConfigSync;
 export const opencodeConfigSync = mimocodeConfigSync;
 export const opencodeSynced = mimocodeConfigSync;

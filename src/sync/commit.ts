@@ -1,8 +1,8 @@
-import type { PluginInput } from '@mimo-ai/plugin';
+import type { PluginClient, PluginShell } from './plugin-types.js';
 import { extractTextFromResponse, resolveSmallModel, unwrapData } from './utils.js';
 
-type CommitClient = PluginInput['client'];
-type Shell = PluginInput['$'];
+type CommitClient = PluginClient;
+type Shell = PluginShell;
 
 interface CommitContext {
   client: CommitClient;

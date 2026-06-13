@@ -1,6 +1,6 @@
-import type { PluginInput } from '@mimo-ai/plugin';
+import type { PluginClient } from './plugin-types.js';
 
-type Client = PluginInput['client'];
+type Client = PluginClient;
 
 const SERVICE_NAME = 'mimocode-synced';
 

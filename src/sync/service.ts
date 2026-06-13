@@ -1,7 +1,5 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-
-import type { PluginInput } from '@mimo-ai/plugin';
 import { syncLocalToRepo, syncRepoToLocal } from './apply.js';
 import { generateCommitMessage } from './commit.js';
 import type { NormalizedSyncConfig } from './config.js';
@@ -20,6 +18,7 @@ import { SyncCommandError, SyncConfigMissingError } from './errors.js';
 import type { SyncLockInfo } from './lock.js';
 import { withSyncLock } from './lock.js';
 import { buildSyncPlan, resolveRepoRoot, resolveSyncLocations } from './paths.js';
+import type { PluginClient, PluginShell } from './plugin-types.js';
 import {
   commitAll,
   ensureRepoCloned,
@@ -56,9 +55,9 @@ import {
   unwrapData,
 } from './utils.js';
 
-type SyncServiceContext = Pick<PluginInput, 'client' | '$'>;
+type SyncServiceContext = { client: PluginClient; $: PluginShell };
 type Logger = ReturnType<typeof createLogger>;
-type Shell = PluginInput['$'];
+type Shell = PluginShell;
 
 interface InitOptions {
   repo?: string;

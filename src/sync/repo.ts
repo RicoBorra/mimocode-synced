@@ -1,7 +1,5 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { PluginInput } from '@mimo-ai/plugin';
-
 import type { SyncConfig } from './config.js';
 import { pathExists } from './config.js';
 import {
@@ -10,6 +8,7 @@ import {
   RepoVisibilityError,
   SyncCommandError,
 } from './errors.js';
+import type { PluginShell } from './plugin-types.js';
 
 export interface RepoStatus {
   branch: string;
@@ -21,7 +20,7 @@ export interface RepoUpdateResult {
   branch: string;
 }
 
-type Shell = PluginInput['$'];
+type Shell = PluginShell;
 
 export async function isRepoCloned(repoDir: string): Promise<boolean> {
   const gitDir = path.join(repoDir, '.git');
