@@ -24,9 +24,7 @@
     "access": "public"
   },
   "files": ["dist"],
-  "dependencies": {
-    "@mimo-ai/plugin": "0.1.0-preview.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@biomejs/biome": "2.3.10",
     "@commitlint/cli": "^20.2.0",
