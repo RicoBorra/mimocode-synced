@@ -18,6 +18,7 @@
   "extraConfigPaths": [],
   "repo": {
     "owner": "RicoBorra",
-    "name": "my-mimocode-config"
+    "name": "my-mimocode-config",
+    "branch": "main"
   }
 }
