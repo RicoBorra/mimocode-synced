@@ -25,7 +25,6 @@ Enable the plugin in your global mimocode config (mimocode will install it on ne
 
 ```jsonc
 {
-  "$schema": "https://mimocode.ai/config.json",
   "plugin": ["mimocode-synced"],
 }
 ```
