@@ -1,16 +1,18 @@
-# opencode-synced
+# mimocode-synced
 
-Sync global opencode configuration across machines via a GitHub repo, with optional secrets support for private repos.
+> **Work in Progress** — This is an early adaptation of [opencode-synced](https://github.com/iHildy/opencode-synced) for MiMo Code. Features may be incomplete or change without notice.
+
+Sync global mimocode configuration across machines via a GitHub repo, with optional secrets support for private repos.
 
 ## Features
 
-- Syncs global opencode config (`~/.config/opencode`) and related directories
+- Syncs global mimocode config (`~/.config/mimocode`) and related directories
 - Optional secrets sync when the repo is private
 - Optional session sync to share conversation history across machines
 - Optional prompt stash sync to share stashed prompts and history across machines
 - Startup auto-sync with restart toast
-- Per-machine overrides via `opencode-synced.overrides.jsonc`
-- Custom `/sync-*` commands and `opencode_sync` tool
+- Per-machine overrides via `mimocode-synced.overrides.jsonc`
+- Custom `/sync-*` commands and `mimocode_sync` tool
 
 ## Requirements
 
@@ -19,16 +21,16 @@ Sync global opencode configuration across machines via a GitHub repo, with optio
 
 ## Setup
 
-Enable the plugin in your global opencode config (opencode will install it on next run):
+Enable the plugin in your global mimocode config (mimocode will install it on next run):
 
 ```jsonc
 {
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-synced"],
+  "$schema": "https://mimocode.ai/config.json",
+  "plugin": ["mimocode-synced"],
 }
 ```
 
-opencode does not auto-update plugins. To update, modify the version number in your config file.
+mimocode does not auto-update plugins. To update, modify the version number in your config file.
 
 ## Configure
 
@@ -37,39 +39,39 @@ opencode does not auto-update plugins. To update, modify the version number in y
 Run `/sync-init` to create a new sync repo:
 
 1. Detects your GitHub username
-2. Creates a private repo (`my-opencode-config` by default)
+2. Creates a private repo (`my-mimocode-config` by default)
 3. Clones the repo and pushes your current config
 
 ### Additional machines (link to existing repo)
 
 Run `/sync-link` to connect to your existing sync repo:
 
-1. Searches your GitHub for common sync repo names (prioritizes `my-opencode-config`)
+1. Searches your GitHub for common sync repo names (prioritizes `my-mimocode-config`)
 2. Clones and applies the synced config
 3. **Overwrites local config** with synced content (preserves your local overrides file)
 
-If auto-detection fails, specify the repo name: `/sync-link my-opencode-config`
+If auto-detection fails, specify the repo name: `/sync-link my-mimocode-config`
 
-After linking, restart opencode to apply the synced settings.
+After linking, restart mimocode to apply the synced settings.
 
 ### Custom repo name or org
 
 You can specify a custom repo name or use an organization:
 
-- `/sync-init` - Uses `{your-username}/my-opencode-config`
+- `/sync-init` - Uses `{your-username}/my-mimocode-config`
 - `/sync-init my-config` - Uses `{your-username}/my-config`
 - `/sync-init my-org/team-config` - Uses `my-org/team-config`
 
 <details>
 <summary>Manual configuration</summary>
 
-Create `~/.config/opencode/opencode-synced.jsonc`:
+Create `~/.config/mimocode/mimocode-synced.jsonc`:
 
 ```jsonc
 {
   "repo": {
     "owner": "your-org",
-    "name": "opencode-config",
+    "name": "mimocode-config",
     "branch": "main",
   },
   "includeSecrets": false,
@@ -84,7 +86,7 @@ Create `~/.config/opencode/opencode-synced.jsonc`:
   },
   "includePromptStash": false,
   "includeModelFavorites": true,
-  "includeOpencodeSkills": true,
+  "includeMimocodeSkills": true,
   "includeAgentsDir": true,
   "extraSecretPaths": [],
   "extraConfigPaths": [],
@@ -95,26 +97,26 @@ Create `~/.config/opencode/opencode-synced.jsonc`:
 
 ### Synced paths (default)
 
-- `~/.config/opencode/opencode.json` and `opencode.jsonc`
-- `~/.config/opencode/AGENTS.md`
-- `~/.config/opencode/agent/`, `command/`, `mode/`, `tool/`, `themes/`, `plugin/`, `skills/`
+- `~/.config/mimocode/mimocode.json` and `mimocode.jsonc`
+- `~/.config/mimocode/AGENTS.md`
+- `~/.config/mimocode/agent/`, `command/`, `mode/`, `tool/`, `themes/`, `plugin/`, `skills/`
 - `~/.agents/`
-- `~/.local/state/opencode/model.json` (model favorites)
-- Any additional paths in `extraConfigPaths` (allowlist, files or folders). You do not need to include default paths like `~/.config/opencode/skills` or `~/.agents`.
+- `~/.local/state/mimocode/model.json` (model favorites)
+- Any additional paths in `extraConfigPaths` (allowlist, files or folders). You do not need to include default paths like `~/.config/mimocode/skills` or `~/.agents`.
 
 Disable default directory sync by setting:
-- `"includeOpencodeSkills": false` to skip `~/.config/opencode/skills/`
+- `"includeMimocodeSkills": false` to skip `~/.config/mimocode/skills/`
 - `"includeAgentsDir": false` to skip `~/.agents/`
 
 ### Secrets (private repos only)
 
 Enable secrets with `/sync-enable-secrets` or set `"includeSecrets": true`:
 
-- `~/.local/share/opencode/auth.json`
-- `~/.local/share/opencode/mcp-auth.json`
+- `~/.local/share/mimocode/auth.json`
+- `~/.local/share/mimocode/mcp-auth.json`
 - Any extra paths in `extraSecretPaths` (allowlist, files or folders)
 
-MCP API keys stored inside `opencode.json(c)` are **not** committed by default. To allow them
+MCP API keys stored inside `mimocode.json(c)` are **not** committed by default. To allow them
 in a private repo, set `"includeMcpSecrets": true` (requires `includeSecrets`).
 
 ### Sessions (private repos only)
@@ -122,6 +124,10 @@ in a private repo, set `"includeMcpSecrets": true` (requires `includeSecrets`).
 Session sync remains opt-in via `"includeSessions": true` (and requires `"includeSecrets": true`).
 Session backend defaults to Git for backward compatibility. Turso is recommended for users running
 multiple active machines concurrently.
+
+> **Note**: The session database (`mimocode.db`) is used by background features like dream and distill.
+> Syncing sessions across machines may cause conflicts with these features. Consider whether session
+> sync is appropriate for your workflow before enabling it.
 
 ```jsonc
 {
@@ -131,7 +137,7 @@ multiple active machines concurrently.
   "sessionBackend": {
     "type": "git", // or "turso"
     "turso": {
-      "database": "my-opencode-config-sessions", // optional
+      "database": "my-mimocode-config-sessions", // optional
       "url": "libsql://...", // optional
       "syncIntervalSec": 15, // default 15
       "autoSetup": true, // default true
@@ -144,12 +150,12 @@ multiple active machines concurrently.
 
 Best-effort session artifact sync via Git paths:
 
-- `~/.local/share/opencode/opencode.db`
-- `~/.local/share/opencode/opencode.db-wal` and `~/.local/share/opencode/opencode.db-shm`
-- `~/.local/share/opencode/storage/session/`
-- `~/.local/share/opencode/storage/message/`
-- `~/.local/share/opencode/storage/part/`
-- `~/.local/share/opencode/storage/session_diff/`
+- `~/.local/share/mimocode/mimocode.db`
+- `~/.local/share/mimocode/mimocode.db-wal` and `~/.local/share/mimocode/mimocode.db-shm`
+- `~/.local/share/mimocode/storage/session/`
+- `~/.local/share/mimocode/storage/message/`
+- `~/.local/share/mimocode/storage/part/`
+- `~/.local/share/mimocode/storage/session_diff/`
 
 This mode can conflict with concurrent writers.
 
@@ -170,7 +176,7 @@ Turso setup is machine-local and idempotent:
 - Creates/reuses the Turso database + token.
 - Stores credentials in a local machine-only file (`0600`) outside the sync repo.
 
-After pulling session changes, restart opencode to ensure the latest session state is loaded.
+After pulling session changes, restart mimocode to ensure the latest session state is loaded.
 
 ### Prompt Stash (private repos only)
 
@@ -186,24 +192,24 @@ Sync your stashed prompts and prompt history across machines by setting `"includ
 
 Synced prompt data:
 
-- `~/.local/state/opencode/prompt-stash.jsonl` - Stashed prompts
-- `~/.local/state/opencode/prompt-history.jsonl` - Prompt history
+- `~/.local/state/mimocode/prompt-stash.jsonl` - Stashed prompts
+- `~/.local/state/mimocode/prompt-history.jsonl` - Prompt history
 
 ## Overrides
 
 Create a local-only overrides file at:
 
 ```
-~/.config/opencode/opencode-synced.overrides.jsonc
+~/.config/mimocode/mimocode-synced.overrides.jsonc
 ```
 
-Overrides are merged into the runtime config and re-applied to `opencode.json(c)` after pull.
+Overrides are merged into the runtime config and re-applied to `mimocode.json(c)` after pull.
 
 ### MCP secret scrubbing
 
-If your `opencode.json(c)` contains MCP secrets (for example `mcp.*.headers` or `mcp.*.oauth.clientSecret`), opencode-synced will automatically:
+If your `mimocode.json(c)` contains MCP secrets (for example `mcp.*.headers` or `mcp.*.oauth.clientSecret`), mimocode-synced will automatically:
 
-1. Move the secret values into `opencode-synced.overrides.jsonc` (local-only).
+1. Move the secret values into `mimocode-synced.overrides.jsonc` (local-only).
 2. Replace the values in the synced config with `{env:...}` placeholders.
 
 This keeps secrets out of the repo while preserving local behavior. On other machines, set the matching environment variables (or add local overrides).
@@ -212,8 +218,8 @@ If you want MCP secrets committed (private repos only), set `"includeMcpSecrets"
 Env var naming rules:
 
 - If the header name already looks like an env var (e.g. `CONTEXT7_API_KEY`), it is used directly.
-- Otherwise: `opencode_mcp_<SERVER>_<HEADER>` (non-alphanumerics become `_`).
-- OAuth client secrets use `opencode_mcp_<SERVER>_OAUTH_CLIENT_SECRET`.
+- Otherwise: `mimocode_mcp_<SERVER>_<HEADER>` (non-alphanumerics become `_`).
+- OAuth client secrets use `mimocode_mcp_<SERVER>_OAUTH_CLIENT_SECRET`.
 
 ## Usage
 
@@ -236,14 +242,14 @@ Env var naming rules:
 
 ### Trigger a sync
 
-Restart opencode to run the startup sync flow (pull remote, apply if changed, push local changes if needed).
+Restart mimocode to run the startup sync flow (pull remote, apply if changed, push local changes if needed).
 
 ### Check status
 
 Inspect the local repo directly:
 
 ```bash
-cd ~/.local/share/opencode/opencode-synced/repo
+cd ~/.local/share/mimocode/mimocode-synced/repo
 git status
 git log --oneline -5
 ```
@@ -258,7 +264,7 @@ If the sync repo has uncommitted changes, you can:
 2. **Manual resolution**: Navigate to the repo and resolve manually:
 
 ```bash
-cd ~/.local/share/opencode/opencode-synced/repo
+cd ~/.local/share/mimocode/mimocode-synced/repo
 git status
 git pull --rebase
 ```
@@ -268,7 +274,7 @@ Then re-run `/sync-pull` or `/sync-push`.
 ## Removal
 
 <details>
-<summary>How to completely remove and delete opencode-synced</summary>
+<summary>How to completely remove and delete mimocode-synced</summary>
 
 Run this one-liner to remove the plugin from your config, delete local sync files, and delete the GitHub repository:
 
@@ -276,16 +282,16 @@ Run this one-liner to remove the plugin from your config, delete local sync file
 bun -e '
   const fs = require("node:fs"), path = require("node:path"), os = require("node:os"), { spawnSync } = require("node:child_process");
   const isWin = os.platform() === "win32", home = os.homedir();
-  const configDir = isWin ? path.join(process.env.APPDATA, "opencode") : path.join(home, ".config", "opencode");
-  const dataDir = isWin ? path.join(process.env.LOCALAPPDATA, "opencode") : path.join(home, ".local", "share", "opencode");
-  ["opencode.json", "opencode.jsonc"].forEach(f => {
+  const configDir = isWin ? path.join(process.env.APPDATA, "mimocode") : path.join(home, ".config", "mimocode");
+  const dataDir = isWin ? path.join(process.env.LOCALAPPDATA, "mimocode") : path.join(home, ".local", "share", "mimocode");
+  ["mimocode.json", "mimocode.jsonc"].forEach(f => {
     const p = path.join(configDir, f);
     if (fs.existsSync(p)) {
-      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"opencode-synced"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
+      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"mimocode-synced"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
       if (c !== u) fs.writeFileSync(p, u);
     }
   });
-  const scp = path.join(configDir, "opencode-synced.jsonc");
+  const scp = path.join(configDir, "mimocode-synced.jsonc");
   if (fs.existsSync(scp)) {
     try {
       const c = JSON.parse(fs.readFileSync(scp, "utf8").replace(/\/\/.*/g, ""));
@@ -295,20 +301,20 @@ bun -e '
       }
     } catch (e) {}
   }
-  [scp, path.join(configDir, "opencode-synced.overrides.jsonc"), path.join(dataDir, "sync-state.json"), path.join(dataDir, "opencode-synced")].forEach(p => {
+  [scp, path.join(configDir, "mimocode-synced.overrides.jsonc"), path.join(dataDir, "sync-state.json"), path.join(dataDir, "mimocode-synced")].forEach(p => {
     if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
   });
-  console.log("opencode-synced removed.");
+  console.log("mimocode-synced removed.");
 '
 ```
 
 ### Manual steps
-1. Remove `"opencode-synced"` from the `plugin` array in `~/.config/opencode/opencode.json` (or `.jsonc`).
+1. Remove `"mimocode-synced"` from the `plugin` array in `~/.config/mimocode/mimocode.json` (or `.jsonc`).
 2. Delete the local configuration and state:
    ```bash
-   rm ~/.config/opencode/opencode-synced.jsonc
-   rm ~/.local/share/opencode/sync-state.json
-   rm -rf ~/.local/share/opencode/opencode-synced
+   rm ~/.config/mimocode/mimocode-synced.jsonc
+   rm ~/.local/share/mimocode/sync-state.json
+   rm -rf ~/.local/share/mimocode/mimocode-synced
    ```
 3. (Optional) Delete the backup repository on GitHub via the web UI or `gh repo delete`.
 
@@ -334,7 +340,7 @@ The Codex environment just invokes `scripts/setup-env.sh`. Setup does:
 
 - `bun install` (idempotent)
 - creates runtime folders under `.memory/`
-- clones upstream opencode into `.memory/opencode-upstream/opencode` **only if missing**
+- clones upstream mimocode into `.memory/mimocode-upstream/mimocode` **only if missing**
 
 The upstream clone is local-only and is not auto-updated by setup.
 
@@ -363,27 +369,27 @@ python3 scripts/e2e/github_two_instance.py --preflight-only
 python3 scripts/e2e/github_two_instance.py --keep-failed-repo
 ```
 
-The harness runs two isolated opencode instances, uses a unique ephemeral private GitHub repo,
+The harness runs two isolated mimocode instances, uses a unique ephemeral private GitHub repo,
 and writes artifacts to `.memory/e2e/runs/<run-id>/`.
 
 ### Local testing (production-like)
 
 To test the same artifact that would be published, install from a packed tarball
-into opencode's cache:
+into mimocode's cache:
 
 ```bash
 mise run local-pack-test
 ```
 
-Then set `~/.config/opencode/opencode.json` to use:
+Then set `~/.config/mimocode/mimocode.json` to use:
 
 ```jsonc
 {
-  "plugin": ["opencode-synced"]
+  "plugin": ["mimocode-synced"]
 }
 ```
 
-Restart opencode to pick up the cached install.
+Restart mimocode to pick up the cached install.
 
 
 ## Prefer a CLI version?
