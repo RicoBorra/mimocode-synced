@@ -6,7 +6,9 @@ Sync global mimocode configuration across machines via a GitHub repo, with optio
 
 ## How this differs from opencode-synced
 
-This plugin is a fork of [opencode-synced](https://github.com/iHildy/opencode-synced), adapted for MiMo Code. The **sync logic is identical** — same init flow, same pull/push, same config structure. The difference is entirely in how the plugin is installed and loaded, caused by MiMo Code's plugin ecosystem being less mature than opencode's.
+This plugin is a fork of [opencode-synced](https://github.com/iHildy/opencode-synced), adapted for MiMo Code. The **sync logic is identical** — same init flow, same pull/push, same config structure. The differences are in the plugin API surface and how the plugin is loaded.
+
+### SDK and loading
 
 | | opencode-synced (upstream) | mimocode-synced (this fork) |
 |---|---|---|
@@ -14,11 +16,30 @@ This plugin is a fork of [opencode-synced](https://github.com/iHildy/opencode-sy
 | **SDK package** | `@opencode-ai/plugin@1.9.0` — exists on npm, works | `@mimo-ai/plugin@0.1.0` — does not exist on npm yet |
 | **Runtime deps** | SDK provides zod + types at runtime | Must bundle zod + hand-write type stubs (`src/sync/plugin-types.ts`) |
 | **Build** | `tsc` only | `tsc` + esbuild single-file bundle |
-| **Host loader** | Accepts multiple exports (named + default) | Rejects non-function exports — only `server` + `default` allowed |
 
-**Root cause**: `@mimo-ai/plugin` has no stable release on npm. MiMo Code's auto-installer targets a version that doesn't exist, and its plugin loader has stricter export constraints. Once Xiaomi publishes a stable SDK and fixes the loader, this fork's setup could collapse to match upstream's single-line install.
+### API surface differences
 
-The `src/sync/plugin-types.ts` file exists only because of this SDK gap — it manually describes the interfaces that the upstream gets from `@opencode-ai/plugin`. It will be removed once a working SDK is available.
+These are actual behavioral differences in the plugin API, not just naming:
+
+| | opencode-synced | mimocode-synced |
+|---|---|---|
+| **Export convention** | Exports `opencodeConfigSync`, `opencodeSynced` (alias), and `default` — host accepts all | Only `server` + `default` — host iterates `Object.values(module)` and throws on non-function exports |
+| **`tool.schema`** | `tool.schema.string()`, `tool.schema.enum()`, etc. available from SDK | Does not exist in `@mimo-ai/plugin/tool` — must import `z` from `zod` directly |
+| **PluginModule type** | SDK provides canonical types | Hand-written stubs in `src/sync/plugin-types.ts` that may drift from host |
+| **Extra hooks** | N/A | `@mimo-ai/plugin` exports `actor.preStop`/`actor.postStop` hooks not present in upstream (unused by this plugin) |
+| **Config casting** | `config.command` works directly | Requires explicit casting: `config as Record<string, unknown>` |
+
+### Design differences
+
+- **SQLite session exclusion**: `mimocode.db` is not synced by default due to dream/distill dependencies in MiMo Code. Upstream syncs it when sessions are enabled.
+- **Repo discovery backward compat**: `LIKELY_SYNC_REPO_NAMES` in `repo.ts` includes both mimocode and opencode variants so migrating users can find existing repos.
+- **E2E scripts**: Still reference `opencode` binary/paths — deferred until mimocode CLI is available for E2E testing.
+
+### Root cause
+
+`@mimo-ai/plugin` has no stable release on npm. MiMo Code's auto-installer targets a version that doesn't exist, and its plugin loader has stricter export constraints. Once Xiaomi publishes a stable SDK and fixes the loader, the setup and API differences could collapse to match upstream.
+
+The `src/sync/plugin-types.ts` file and the `zod` bundling exist only because of this SDK gap. They will be removed once a working SDK is available.
 
 ## Features
 
