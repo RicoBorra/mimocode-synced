@@ -25,7 +25,7 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@opencode-ai/plugin": "1.0.85"
+    "@mimo-ai/plugin": "0.1.0-preview.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.10",

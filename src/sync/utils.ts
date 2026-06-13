@@ -1,4 +1,4 @@
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput } from '@mimo-ai/plugin';
 
 type Client = PluginInput['client'];
 
@@ -32,7 +32,7 @@ function log(
         extra,
       },
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       const errorMsg = err instanceof Error ? err.message : String(err);
       showToast(client, `Logging failed: ${errorMsg}`, 'error');
     });

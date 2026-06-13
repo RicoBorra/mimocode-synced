@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput } from '@mimo-ai/plugin';
 import { syncLocalToRepo, syncRepoToLocal } from './apply.js';
 import { generateCommitMessage } from './commit.js';
 import type { NormalizedSyncConfig } from './config.js';

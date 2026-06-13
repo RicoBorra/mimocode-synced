@@ -1,4 +1,4 @@
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput } from '@mimo-ai/plugin';
 import { extractTextFromResponse, resolveSmallModel, unwrapData } from './utils.js';
 
 type CommitClient = PluginInput['client'];

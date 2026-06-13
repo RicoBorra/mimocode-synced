@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Plugin } from '@opencode-ai/plugin';
-import { tool } from '@opencode-ai/plugin';
+import type { Plugin } from '@mimo-ai/plugin';
+import { tool } from '@mimo-ai/plugin/tool';
+import { z } from 'zod';
 
 import { applyOverridesToRuntimeConfig, loadOverrides } from './sync/config.js';
 import { SyncCommandError, SyncConfigMissingError } from './sync/errors.js';
@@ -116,7 +117,7 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
   const syncTool = tool({
     description: 'Manage mimocode config sync with a GitHub repo',
     args: {
-      command: tool.schema
+      command: z
         .enum([
           'status',
           'init',
@@ -134,47 +135,47 @@ export const mimocodeConfigSync: Plugin = async (ctx) => {
           'sessions-cleanup-git',
         ])
         .describe('Sync command to execute'),
-      repo: tool.schema.string().optional().describe('Repo owner/name or URL'),
-      owner: tool.schema.string().optional().describe('Repo owner'),
-      name: tool.schema.string().optional().describe('Repo name'),
-      url: tool.schema.string().optional().describe('Repo URL'),
-      branch: tool.schema.string().optional().describe('Repo branch'),
-      includeSecrets: tool.schema.boolean().optional().describe('Enable secrets sync'),
-      includeMcpSecrets: tool.schema
+      repo: z.string().optional().describe('Repo owner/name or URL'),
+      owner: z.string().optional().describe('Repo owner'),
+      name: z.string().optional().describe('Repo name'),
+      url: z.string().optional().describe('Repo URL'),
+      branch: z.string().optional().describe('Repo branch'),
+      includeSecrets: z.boolean().optional().describe('Enable secrets sync'),
+      includeMcpSecrets: z
         .boolean()
         .optional()
         .describe('Allow MCP secrets to be committed (requires includeSecrets)'),
-      includeSessions: tool.schema
+      includeSessions: z
         .boolean()
         .optional()
         .describe('Enable session sync (requires includeSecrets)'),
-      sessionBackend: tool.schema
+      sessionBackend: z
         .enum(['git', 'turso'])
         .optional()
         .describe('Session sync backend when includeSessions=true'),
-      includePromptStash: tool.schema
+      includePromptStash: z
         .boolean()
         .optional()
         .describe('Enable prompt stash/history sync (requires includeSecrets)'),
-      includeModelFavorites: tool.schema
+      includeModelFavorites: z
         .boolean()
         .optional()
         .describe('Sync model favorites (state/model.json)'),
-      includeMimocodeSkills: tool.schema
+      includeMimocodeSkills: z
         .boolean()
         .optional()
         .describe('Sync ~/.config/mimocode/skills directory'),
-      includeAgentsDir: tool.schema.boolean().optional().describe('Sync ~/.agents directory'),
-      create: tool.schema.boolean().optional().describe('Create repo if missing'),
-      private: tool.schema.boolean().optional().describe('Create repo as private'),
-      extraSecretPaths: tool.schema.array(tool.schema.string()).optional(),
-      extraConfigPaths: tool.schema.array(tool.schema.string()).optional(),
-      localRepoPath: tool.schema.string().optional().describe('Override local repo path'),
-      setupTurso: tool.schema
+      includeAgentsDir: z.boolean().optional().describe('Sync ~/.agents directory'),
+      create: z.boolean().optional().describe('Create repo if missing'),
+      private: z.boolean().optional().describe('Create repo as private'),
+      extraSecretPaths: z.array(z.string()).optional(),
+      extraConfigPaths: z.array(z.string()).optional(),
+      localRepoPath: z.string().optional().describe('Override local repo path'),
+      setupTurso: z
         .boolean()
         .optional()
         .describe('Run Turso setup (install/auth/provision) when Turso backend is selected'),
-      migrateSessions: tool.schema
+      migrateSessions: z
         .boolean()
         .optional()
         .describe('Bootstrap remote Turso sessions from local session DB before switching backend'),
